@@ -1,4 +1,4 @@
-# 🚀 [Nama Proyek Kamu]
+# 🚀 Learning Physic UNSERA
 
 > Proyek antarmuka web modern, ringan, dan responsif. Dibangun secara resmi pada **21 November 2026**.
 
