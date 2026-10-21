@@ -24,5 +24,4 @@ Proyek ini dibangun menggunakan *stack* teknologi yang modern dan efisien:
 *   **HTML5** - Struktur semantik halaman web.
 *   **[Tailwind CSS](https://tailwindcss.com/)** - *Framework* CSS utility-first untuk *styling* yang cepat dan kustomisasi tanpa batas.
 *   **[Alpine.js](https://alpinejs.dev/)** - *Framework* JavaScript minimalis yang menawarkan sifat reaktif seperti Vue/React dengan *overhead* yang sangat rendah.
-*   **[Lucide Icons](https://lucide.dev/)** - Ikon SVG yang cantik dan konsisten (opsional/sesuaikan jika ada).
 
