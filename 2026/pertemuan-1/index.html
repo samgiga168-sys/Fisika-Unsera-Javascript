@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Halaman Utama">
+    <title>Halaman Utama</title>
+
+    <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+
+    <!-- THEME SCRIPT -->
+    <script>
+        try {
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme) {
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            }
+        } catch (e) {}
+    </script>
+
+    <!-- TAILWIND CSS LOKAL & CONFIG -->
+    <script src="../../static/js/tailwindcss/tailwindcss.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ['selector', '[data-theme="dark"]'],
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+
+    <!-- Alpine Plugins LOKAL -->
+    <script defer src="../../static/js/alpine-collapse.min.js"></script>
+    <!-- Alpine.js CSP -->
+    <script defer src="../../static/js/alpine.min.js"></script>
+
+    <!-- KONFIGURASI & LOAD MATHJAX -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async src="../../static/js/mathjax/tex-svg.js"></script>
+
+</head>
+
+<body class="min-h-screen flex flex-col bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200 relative">
+
+    <!-- OVERLAY CANVAS UNTUK CORETAN -->
+    <div x-data="canvasDraw" @clear-canvas.window="clearCanvas">
+        <canvas
+            x-ref="canvas"
+            class="fixed top-0 left-0 w-full h-full z-40 transition-colors"
+            :class="{ 'pointer-events-none': !$store.drawState.active, 'pointer-events-auto cursor-crosshair': $store.drawState.active }"
+            @mousedown="startDrawing"
+            @mousemove="draw"
+            @mouseup="stopDrawing"
+            @mouseleave="stopDrawing"
+        ></canvas>
+    </div>
+
+    <!-- KOMPONEN HEADER (Telah digabung langsung) -->
+    <header x-data="headerMenu" class="bg-blue-600 dark:bg-blue-900 text-white shadow-md relative z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            
+            <!-- Logo -->
+            <div class="text-xl font-bold tracking-wider">
+                <!-- Tempat logo kosong -->
+            </div>
+
+            <!-- Toolbar / Menu -->
+            <div class="flex items-center space-x-4 md:space-x-6">
+                
+                <!-- Opsi Alat Gambar -->
+                <div class="relative">
+                    <!-- Tombol Trigger Dropdown -->
+                    <button @click="toggleDropdown" @click.outside="closeDropdown" class="flex items-center space-x-2 hover:text-blue-200 transition focus:outline-none focus:ring-0" title="Alat Gambar">
+                        <!-- Ikon Pulpen/Pensil -->
+                        <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                        <span class="hidden md:inline font-medium">Alat Gambar</span>
+                        
+                        <!-- Indikator Aktif -->
+                        <span x-show="$store.drawState.active" class="flex w-2 h-2 rounded-full bg-red-400"></span>
+                        
+                        <!-- Ikon Panah Bawah -->
+                        <svg class="w-4 h-4 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <!-- Menu Dropdown -->
+                    <div x-show="openDropdown" 
+                         x-transition.opacity.duration.200ms
+                         style="display: none;" 
+                         class="absolute right-0 mt-3 w-64 bg-white dark:bg-gray-800 rounded-md shadow-xl py-2 z-50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 flex flex-col">
+                        
+                        <!-- Opsi: Pulpen -->
+                        <button @click="setDrawTool('pencil')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                                <span>Pulpen Bebas</span>
+                            </div>
+                            <svg x-show="$store.drawState.active && $store.drawState.tool === 'pencil'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
+                            </svg>
+                        </button>
+
+                        <!-- Opsi: Rectangle (Garis) -->
+                        <button @click="setDrawTool('rectangle')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16v12H4z"></path>
+                                </svg>
+                                <span>Kotak (Garis)</span>
+                            </div>
+                            <svg x-show="$store.drawState.active && $store.drawState.tool === 'rectangle'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
+                            </svg>
+                        </button>
+
+                        <!-- Opsi: Rectangle Blok (Solid) -->
+                        <button @click="setDrawTool('filled-rectangle')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M4 6h16v12H4z"></path>
+                                </svg>
+                                <span>Kotak Blok (Solid)</span>
+                            </div>
+                            <svg x-show="$store.drawState.active && $store.drawState.tool === 'filled-rectangle'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
+                            </svg>
+                        </button>
+
+                        <hr class="my-1 border-gray-200 dark:border-gray-600">
+
+                        <!-- Opsi: Hapus Semua Coretan -->
+                        <button @click="clearCanvas" class="w-full px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center space-x-3 transition focus:outline-none focus:ring-0 text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            <span>Hapus Coretan</span>
+                        </button>
+
+                        <!-- Opsi: Matikan Mode Gambar -->
+                        <button @click="disableDraw" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 transition focus:outline-none focus:ring-0 text-left">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>Matikan Mode Gambar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Opsi Papan Tulis / Board -->
+                <button class="flex items-center space-x-2 hover:text-blue-200 transition focus:outline-none focus:ring-0" title="Buka Papan Tulis">
+                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                    </svg>
+                    <span class="hidden md:inline font-medium">Papan Tulis</span>
+                </button>
+                
+            </div>
+        </div>
+    </header>
+
+    <!-- KONTEN UTAMA HALAMAN -->
+    <main class="flex-grow container mx-auto px-4 py-8 space-y-8 relative z-30">
+        
+        <div x-data="mainContent" class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <h1 class="text-3xl font-bold mb-4 text-blue-600 dark:text-blue-400">Selamat Datang</h1>
+            <p class="mb-4">Ini adalah halaman utama index.html yang memuat komponen secara dinamis menggunakan Alpine CSP.</p>
+            
+            <button @click="toggle" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition relative z-30">
+                <span x-text="buttonText"></span>
+            </button>
+
+            <div x-show="open" x-collapse x-cloak class="mt-4 p-4 bg-white dark:bg-gray-700 rounded border dark:border-gray-600">
+                <p>Fitur x-collapse Alpine JS CSP bekerja dengan baik bersama Tailwind CSS.</p>
+            </div>
+        </div>
+
+        <!-- Contoh Implementasi MathJax -->
+        <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md overflow-x-auto">
+            <h2 class="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">Rumus Aljabar Linier (MathJax)</h2>
+            <div class="space-y-6">
+                <!-- Contoh 1 -->
+                <div class="p-4 bg-white dark:bg-gray-700 rounded border dark:border-gray-600">
+                    <h3 class="font-semibold mb-2">Sistem Persamaan Linier ($A\mathbf{x} = \mathbf{b}$)</h3>
+                    <div class="text-center overflow-x-auto">
+                        $$ \begin{bmatrix} a_{11} & a_{12} & a_{13} \\ a_{21} & a_{22} & a_{23} \\ a_{31} & a_{32} & a_{33} \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \\ x_3 \end{bmatrix} = \begin{bmatrix} b_1 \\ b_2 \\ b_3 \end{bmatrix} $$
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- LOGIKA ALPINE CSP -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            
+            // State global untuk alat gambar
+            Alpine.store('drawState', {
+                active: false,
+                tool: 'pencil' // 'pencil', 'rectangle', atau 'filled-rectangle'
+            });
+
+            // Komponen Logika Canvas
+            Alpine.data('canvasDraw', () => ({
+                isDrawing: false,
+                ctx: null,
+                startX: 0,
+                startY: 0,
+                savedImageData: null,
+
+                init() {
+                    this.ctx = this.$refs.canvas.getContext('2d');
+                    this.resizeCanvas();
+                    window.addEventListener('resize', () => this.resizeCanvas());
+                },
+                resizeCanvas() {
+                    const canvas = this.$refs.canvas;
+                    let imgData = null;
+                    if (this.ctx && canvas.width > 0) {
+                        imgData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    }
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    
+                    // Setting dasar coretan
+                    this.ctx.lineWidth = 3;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.strokeStyle = '#ef4444'; // Warna merah
+                    this.ctx.fillStyle = '#ef4444'; // Warna merah solid
+                    
+                    if (imgData) {
+                        this.ctx.putImageData(imgData, 0, 0);
+                    }
+                },
+                startDrawing(e) {
+                    if (!this.$store.drawState.active) return;
+                    this.isDrawing = true;
+                    this.startX = e.clientX;
+                    this.startY = e.clientY;
+                    this.savedImageData = this.ctx.getImageData(0, 0, this.$refs.canvas.width, this.$refs.canvas.height);
+
+                    if (this.$store.drawState.tool === 'pencil') {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.startX, this.startY);
+                    }
+                },
+                draw(e) {
+                    if (!this.isDrawing) return;
+
+                    if (this.$store.drawState.tool === 'pencil') {
+                        this.ctx.lineTo(e.clientX, e.clientY);
+                        this.ctx.stroke();
+                    } else if (this.$store.drawState.tool === 'rectangle') {
+                        this.ctx.putImageData(this.savedImageData, 0, 0);
+                        this.ctx.beginPath();
+                        this.ctx.rect(this.startX, this.startY, e.clientX - this.startX, e.clientY - this.startY);
+                        this.ctx.stroke();
+                    } else if (this.$store.drawState.tool === 'filled-rectangle') {
+                        this.ctx.putImageData(this.savedImageData, 0, 0);
+                        this.ctx.beginPath();
+                        this.ctx.rect(this.startX, this.startY, e.clientX - this.startX, e.clientY - this.startY);
+                        this.ctx.fill();
+                    }
+                },
+                stopDrawing() {
+                    this.isDrawing = false;
+                },
+                clearCanvas() {
+                    this.ctx.clearRect(0, 0, this.$refs.canvas.width, this.$refs.canvas.height);
+                }
+            }));
+
+            // Komponen untuk memuat file HTML eksternal (Footer)
+            Alpine.data('loadComponent', (url) => ({
+                html: '',
+                init() {
+                    fetch(url)
+                        .then(response => {
+                            if (!response.ok) throw new Error('Gagal memuat ' + url);
+                            return response.text();
+                        })
+                        .then(data => {
+                            this.html = data;
+                        })
+                        .catch(error => console.error('Error memuat komponen:', error));
+                }
+            }));
+
+            // Komponen untuk Halaman Utama
+            Alpine.data('mainContent', () => ({
+                open: false,
+                toggle() {
+                    this.open = !this.open;
+                },
+                get buttonText() {
+                    return this.open ? 'Tutup Info' : 'Buka Info Tambahan';
+                }
+            }));
+
+            // Komponen untuk Header
+            Alpine.data('headerMenu', () => ({
+                mobileMenuOpen: false,
+                openDropdown: false, 
+                
+                toggleMenu() {
+                    this.mobileMenuOpen = !this.mobileMenuOpen;
+                },
+
+                // FUNGSI KHUSUS UNTUK MEMENUHI ATURAN CSP
+                toggleDropdown() {
+                    this.openDropdown = !this.openDropdown;
+                },
+                closeDropdown() {
+                    this.openDropdown = false;
+                },
+                setDrawTool(tool) {
+                    this.$store.drawState.active = true;
+                    this.$store.drawState.tool = tool;
+                    this.openDropdown = false;
+                },
+                disableDraw() {
+                    this.$store.drawState.active = false;
+                    this.openDropdown = false;
+                },
+                clearCanvas() {
+                    window.dispatchEvent(new CustomEvent('clear-canvas'));
+                    this.openDropdown = false;
+                }
+            }));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<header x-data="headerMenu" class="bg-blue-600 dark:bg-blue-900 text-white shadow-md relative z-50">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        
+        <!-- Logo -->
+        <div class="text-xl font-bold tracking-wider">
+            <!-- Tempat logo kosong -->
+        </div>
+
+        <!-- Toolbar / Menu -->
+        <div class="flex items-center space-x-4 md:space-x-6">
+            
+            <!-- Opsi Alat Gambar -->
+            <div class="relative">
+                <!-- Tombol Trigger Dropdown -->
+                <button @click="toggleDropdown" @click.outside="closeDropdown" class="flex items-center space-x-2 hover:text-blue-200 transition focus:outline-none focus:ring-0" title="Alat Gambar">
+                    <!-- Ikon Pulpen/Pensil -->
+                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                    </svg>
+                    <span class="hidden md:inline font-medium">Alat Gambar</span>
+                    
+                    <!-- Indikator Aktif -->
+                    <span x-show="$store.drawState.active" class="flex w-2 h-2 rounded-full bg-red-400"></span>
+                    
+                    <!-- Ikon Panah Bawah -->
+                    <svg class="w-4 h-4 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+
+                <!-- Menu Dropdown -->
+                <div x-show="openDropdown" 
+                     x-transition.opacity.duration.200ms
+                     style="display: none;" 
+                     class="absolute right-0 mt-3 w-64 bg-white dark:bg-gray-800 rounded-md shadow-xl py-2 z-50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 flex flex-col">
+                    
+                    <!-- Opsi: Pulpen -->
+                    <button @click="setDrawTool('pencil')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
+                        <div class="flex items-center space-x-3">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                            <span>Pulpen Bebas</span>
+                        </div>
+                        <svg x-show="$store.drawState.active && $store.drawState.tool === 'pencil'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
+                        </svg>
+                    </button>
+
+                    <!-- Opsi: Rectangle (Garis) -->
+                    <button @click="setDrawTool('rectangle')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
+                        <div class="flex items-center space-x-3">
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16v12H4z"></path>
+                            </svg>
+                            <span>Kotak (Garis)</span>
+                        </div>
+                        <svg x-show="$store.drawState.active && $store.drawState.tool === 'rectangle'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
+                        </svg>
+                    </button>
+
+                    <!-- Opsi: Rectangle Blok (Solid) -->
+                    <button @click="setDrawTool('filled-rectangle')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
+                        <div class="flex items-center space-x-3">
+                            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M4 6h16v12H4z"></path>
+                            </svg>
+                            <span>Kotak Blok (Solid)</span>
+                        </div>
+                        <svg x-show="$store.drawState.active && $store.drawState.tool === 'filled-rectangle'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
+                        </svg>
+                    </button>
+
+                    <hr class="my-1 border-gray-200 dark:border-gray-600">
+
+                    <!-- Opsi: Hapus Semua Coretan -->
+                    <button @click="clearCanvas" class="w-full px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center space-x-3 transition focus:outline-none focus:ring-0 text-left">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        <span>Hapus Coretan</span>
+                    </button>
+
+                    <!-- Opsi: Matikan Mode Gambar -->
+                    <button @click="disableDraw" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 transition focus:outline-none focus:ring-0 text-left">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Matikan Mode Gambar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Opsi Papan Tulis / Board -->
+            <button class="flex items-center space-x-2 hover:text-blue-200 transition focus:outline-none focus:ring-0" title="Buka Papan Tulis">
+                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                </svg>
+                <span class="hidden md:inline font-medium">Papan Tulis</span>
+            </button>
+            
+        </div>
+    </div>
+</header>

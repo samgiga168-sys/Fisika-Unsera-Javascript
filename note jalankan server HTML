@@ -1,0 +1,10 @@
+Menggunakan VS Code (Paling Disarankan)
+Jika Anda menggunakan editor Visual Studio Code:
+
+1. Buka tab Extensions (atau tekan Ctrl+Shift+X).
+2. Cari dan install ekstensi bernama Live Server (oleh Ritwick Dey).
+3. Setelah terinstal, buka file index.html Anda.
+
+Klik kanan pada area kode dan pilih "Open with Live Server" (atau klik tombol "Go Live" di pojok kanan bawah VS Code).
+
+Browser akan otomatis terbuka di alamat seperti [http://127.0.0.1:5500](http://127.0.0.1:5500) dan error akan hilang.
