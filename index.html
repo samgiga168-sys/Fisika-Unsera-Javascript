@@ -178,8 +178,49 @@
         </div> -->
 
         <!-- Tombol Tahun Ajaran & Pertemuan (Dilengkapi Alpine.js State & Auto-Scroll) -->
-        <div class="border-t border-zinc-200 dark:border-zinc-800 w-full text-left pt-8 pb-4" 
+        <!-- <div class="border-t border-zinc-200 dark:border-zinc-800 w-full text-left pt-8 pb-4" 
              x-data="{ selectedYear: new Date().getFullYear() }"
+             x-init="$nextTick(() => { document.getElementById('btn-year-' + selectedYear)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }) })">
+             -->
+            <!-- Pilihan Tahun -->
+            <!-- <p class="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-4 px-2">Pilih Tahun Ajaran</p>
+            <div class="flex overflow-x-auto gap-2 pb-4 snap-x items-center custom-scrollbar w-full px-2">
+                <script>
+                    for (let year = 2000; year <= 2050; year++) {
+                        document.write(`
+                            <button id="btn-year-${year}" @click="selectedYear = ${year}" 
+                                class="snap-center shrink-0 inline-flex items-center justify-center rounded-md text-sm font-medium border border-zinc-200 dark:border-zinc-800 transition-colors h-10 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 dark:focus-visible:ring-zinc-300"
+                                :class="selectedYear === ${year} ? 'bg-zinc-900 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900' : 'bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800'">
+                                ${year}
+                            </button>
+                        `);
+                    }
+                </script>
+            </div> -->
+
+            <!-- Pilihan Pertemuan (Otomatis menyesuaikan tahun) -->
+            <!-- <p class="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-4 px-2 mt-4">Pilih Pertemuan</p>
+            <div class="flex overflow-x-auto gap-2 pb-4 snap-x items-center custom-scrollbar w-full px-2">
+                <script>
+                    for (let i = 1; i <= 16; i++) {
+                        document.write(`
+                            <a :href="\`/\${selectedYear}/pertemuan-${i}/index.html\`" 
+                                class="snap-center shrink-0 inline-flex items-center justify-center rounded-md text-sm font-medium border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors h-10 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 dark:focus-visible:ring-zinc-300">
+                                Pertemuan ${i}
+                            </a>
+                        `);
+                    }
+                </script>
+            </div>
+
+        </div> -->
+
+        <!-- Tombol Tahun Ajaran & Pertemuan (Dilengkapi Alpine.js State & Auto-Scroll) -->
+        <div class="border-t border-zinc-200 dark:border-zinc-800 w-full text-left pt-8 pb-4" 
+             x-data="{ 
+                selectedYear: new Date().getFullYear(),
+                basePath: window.location.protocol === 'https:' ? '/Fisika-Unsera-Javascript' : ''
+             }"
              x-init="$nextTick(() => { document.getElementById('btn-year-' + selectedYear)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }) })">
             
             <!-- Pilihan Tahun -->
@@ -198,13 +239,13 @@
                 </script>
             </div>
 
-            <!-- Pilihan Pertemuan (Otomatis menyesuaikan tahun) -->
+            <!-- Pilihan Pertemuan (Otomatis menyesuaikan tahun dan base path HTTP/HTTPS) -->
             <p class="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-4 px-2 mt-4">Pilih Pertemuan</p>
             <div class="flex overflow-x-auto gap-2 pb-4 snap-x items-center custom-scrollbar w-full px-2">
                 <script>
                     for (let i = 1; i <= 16; i++) {
                         document.write(`
-                            <a :href="\`/\${selectedYear}/pertemuan-${i}/index.html\`" 
+                            <a :href="\`\${basePath}/\${selectedYear}/pertemuan-${i}/index.html\`" 
                                 class="snap-center shrink-0 inline-flex items-center justify-center rounded-md text-sm font-medium border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors h-10 px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 dark:focus-visible:ring-zinc-300">
                                 Pertemuan ${i}
                             </a>
@@ -336,5 +377,6 @@
         // Inisialisasi tampilan tombol saat load
         updateActiveButton();
     </script>
+
 </body>
 </html>
