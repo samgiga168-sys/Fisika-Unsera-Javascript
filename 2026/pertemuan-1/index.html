@@ -55,6 +55,7 @@
         .board-canvas-wrapper {
             position: relative;
             width: 100%;
+            height: 100%;
             touch-action: none;
         }
         
@@ -75,13 +76,27 @@
             cursor: crosshair;
         }
         
-        /* Animasi Transisi Toolbar */
+        /* Animasi Transisi Toolbar & Scroll pada Mobile */
         .toolbar-expanded {
-            max-width: 800px !important; 
+            max-width: 90vw !important; /* Adaptif untuk Mobile */
             opacity: 1 !important;
             padding-left: 0.5rem;
             padding-right: 0.5rem;
             margin-left: 0.5rem;
+        }
+        @media (min-width: 640px) {
+            .toolbar-expanded {
+                max-width: 800px !important; /* Adaptif untuk Desktop/Tablet */
+            }
+        }
+
+        /* Menyembunyikan scrollbar di toolbar agar rapi */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         /* Styling Input Ketik Teks & Kursor Resize */
@@ -94,7 +109,7 @@
             font-family: sans-serif;
             padding: 4px;
             z-index: 100;
-            min-width: 150px;
+            min-width: 120px;
             min-height: 40px;
             resize: both; /* Memberikan kursor drag untuk melebarkan di pojok kanan bawah */
             overflow: auto;
@@ -140,11 +155,11 @@
 
     <!-- HEADER: Navigasi Board -->
     <header class="h-16 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 sm:px-6 bg-[hsl(var(--background))] z-10 shadow-sm shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded bg-chalk-green text-white flex items-center justify-center font-bold">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="w-8 h-8 rounded bg-chalk-green text-white flex items-center justify-center font-bold shrink-0">
                 <i data-lucide="graduation-cap" class="w-5 h-5"></i>
             </div>
-            <h1 class="font-semibold text-lg tracking-tight hidden sm:block">Fisika UNSERA</h1>
+            <h1 class="font-semibold text-base sm:text-lg tracking-tight hidden sm:block">Fisika UNSERA</h1>
         </div>
 
         <!-- Board Navigator (30 Papan Tulis) -->
@@ -152,7 +167,7 @@
             <button onclick="prevBoard()" class="inline-flex items-center justify-center h-8 w-8 rounded-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] hover:shadow-sm transition-all disabled:opacity-50" id="btn-prev">
                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
             </button>
-            <div class="px-3 sm:px-4 text-sm font-medium tabular-nums flex items-center justify-center min-w-[90px]">
+            <div class="px-2 sm:px-4 text-sm font-medium tabular-nums flex items-center justify-center min-w-[80px] sm:min-w-[90px]">
                 Board <span id="current-board-label" class="ml-1 mr-1">1</span> / 30
             </div>
             <button onclick="nextBoard()" class="inline-flex items-center justify-center h-8 w-8 rounded-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] hover:shadow-sm transition-all disabled:opacity-50" id="btn-next">
@@ -167,18 +182,19 @@
         </div>
     </header>
 
-    <!-- MAIN WORKSPACE: Flex Center -->
-    <main class="flex-1 w-full relative overflow-hidden flex items-center justify-center bg-[hsl(var(--muted))]">
+    <!-- MAIN WORKSPACE: Adaptif di semua device -->
+    <!-- py-4 sm:py-8 menciptakan ruang kosong di atas dan bawah. flex-1 membuat elemen mengambil seluruh sisa tinggi layar -->
+    <main class="flex-1 w-full relative overflow-hidden flex flex-col py-6 sm:py-8 md:py-10 bg-[hsl(var(--muted))]">
         
-        <!-- PAPAN TULIS: Rata Kanan-Kiri (w-full), Tidak Rata Atas-Bawah (h-[75vh]), Bingkai atas & bawah (border-y) -->
-        <div class="board-canvas-wrapper board-light board-dark border-y-[12px] sm:border-y-[16px] border-x-0 border-chalk-border shadow-2xl w-full h-[70vh] sm:h-[75vh]" id="canvas-container">
+        <!-- PAPAN TULIS: flex-1 membuatnya menyesuaikan diri mengikuti parent, w-full membuatnya rata sisi kiri & kanan -->
+        <div class="board-canvas-wrapper board-light board-dark border-y-[10px] sm:border-y-[14px] md:border-y-[18px] border-x-0 border-chalk-border shadow-2xl w-full flex-1" id="canvas-container">
             <canvas id="chalkboard"></canvas>
         </div>
         
     </main>
 
     <!-- FLOATING TOOLBAR: Bawah Tengah -->
-    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300">
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300 max-w-[95vw]">
         
         <!-- Toggle Menu Button (Titik Satu) -->
         <button onclick="toggleToolbar()" id="btn-toggle-toolbar" class="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-transform active:scale-95 z-20 shrink-0 shadow-sm">
@@ -187,45 +203,45 @@
         </button>
 
         <!-- Hidden Expandable Area (Tools, Size & Themes) -->
-        <div id="expandable-tools" class="flex items-center max-w-0 opacity-0 px-0 overflow-hidden transition-all duration-500 ease-in-out gap-1 z-10 shrink-0">
+        <div id="expandable-tools" class="flex items-center max-w-0 opacity-0 px-0 overflow-x-auto hide-scrollbar transition-all duration-500 ease-in-out gap-1 z-10 shrink-0 scroll-smooth">
             
             <!-- Drawing Tools -->
-            <button onclick="setTool('pen')" id="tool-pen" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Pulpen (P)">
+            <button onclick="setTool('pen')" id="tool-pen" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Pulpen (P)">
                 <i data-lucide="pen" class="w-5 h-5"></i>
             </button>
-            <button onclick="setTool('text')" id="tool-text" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks / Ketik (T)">
+            <button onclick="setTool('text')" id="tool-text" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks / Ketik (T)">
                 <i data-lucide="text-cursor-input" class="w-5 h-5"></i>
             </button>
-            <button onclick="setTool('rect')" id="tool-rect" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kotak (R)">
+            <button onclick="setTool('rect')" id="tool-rect" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kotak (R)">
                 <i data-lucide="square" class="w-5 h-5"></i>
             </button>
-            <button onclick="setTool('circle')" id="tool-circle" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Lingkaran (C)">
+            <button onclick="setTool('circle')" id="tool-circle" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Lingkaran (C)">
                 <i data-lucide="circle" class="w-5 h-5"></i>
             </button>
-            <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Penghapus (E)">
+            <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Penghapus (E)">
                 <i data-lucide="eraser" class="w-5 h-5"></i>
             </button>
 
             <!-- Divider -->
-            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-2"></div>
+            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-1 sm:mx-2 shrink-0"></div>
 
             <!-- Size / Thickness Slider -->
-            <div class="flex items-center gap-2 px-2" title="Ketebalan / Ukuran Font">
+            <div class="flex items-center gap-2 px-2 shrink-0" title="Ketebalan / Ukuran Font">
                 <i data-lucide="scaling" class="w-4 h-4 text-[hsl(var(--muted-foreground))]"></i>
-                <input type="range" id="tool-size" min="1" max="50" value="4" class="w-20 sm:w-28" oninput="updateCanvasContextProps()">
+                <input type="range" id="tool-size" min="1" max="50" value="4" class="w-16 sm:w-28" oninput="updateCanvasContextProps()">
             </div>
 
             <!-- Divider -->
-            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-2"></div>
+            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-1 sm:mx-2 shrink-0"></div>
 
             <!-- Theme Toggles -->
-            <button onclick="setTheme('light')" id="btn-light" class="theme-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Light Mode">
+            <button onclick="setTheme('light')" id="btn-light" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Light Mode">
                 <i data-lucide="sun" class="h-4 w-4"></i>
             </button>
-            <button onclick="setTheme('system')" id="btn-system" class="theme-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="System Mode">
+            <button onclick="setTheme('system')" id="btn-system" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="System Mode">
                 <i data-lucide="monitor" class="h-4 w-4"></i>
             </button>
-            <button onclick="setTheme('dark')" id="btn-dark" class="theme-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Dark Mode">
+            <button onclick="setTheme('dark')" id="btn-dark" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Dark Mode">
                 <i data-lucide="moon" class="h-4 w-4"></i>
             </button>
         </div>
@@ -317,7 +333,7 @@
         // Elemen input teks aktif
         let activeTextInput = null;
 
-        // Setup Canvas Size
+        // Setup Canvas Size (Otomatis Menyesuaikan Screen & Parent saat Resize)
         function resizeCanvas() {
             const tempImg = boardsData[currentBoardIndex];
             canvas.width = container.clientWidth;
@@ -337,7 +353,7 @@
             
             if (currentTool === 'eraser') {
                 ctx.globalCompositeOperation = "destination-out";
-                ctx.lineWidth = toolSize * 5; // Penghapus lebih besar dari pulpen
+                ctx.lineWidth = toolSize * 5; 
             } else {
                 ctx.globalCompositeOperation = "source-over";
                 ctx.lineWidth = toolSize;
@@ -389,16 +405,16 @@
                 const input = document.createElement('textarea');
                 input.className = 'canvas-text-input';
                 
-                // Ambil ukuran font dari slider
+                // Ambil ukuran font dari slider, batas responsif berdasarkan layar
                 const toolSize = parseInt(document.getElementById('tool-size').value);
-                const fontSize = Math.max(16, toolSize * 4); // Minimal 16px
+                const fontSize = Math.max(16, toolSize * 4); 
                 input.style.fontSize = fontSize + 'px';
                 
-                // Posisikan textarea di koordinat klik
+                // Posisikan textarea
                 input.style.left = pos.x + 'px';
                 input.style.top = pos.y + 'px'; 
                 
-                // Samakan warna teks dengan tema
+                // Tema Teks
                 const isDark = document.documentElement.classList.contains('dark');
                 input.style.color = isDark ? '#f8fafc' : '#0f172a';
                 
@@ -415,7 +431,7 @@
                         ctx.fillStyle = input.style.color;
                         ctx.textBaseline = 'top';
                         
-                        // Render per baris (multiline support)
+                        // Render Multiline
                         const lines = text.split('\n');
                         const lineHeight = fontSize * 1.2;
                         lines.forEach((line, index) => {
@@ -428,10 +444,8 @@
                     activeTextInput = null;
                 };
 
-                // Blur / klik di luar akan menempelkan teks
+                // Blur events untuk menge-print Teks
                 input.addEventListener('blur', finalizeText);
-                
-                // Shift+Enter untuk baris baru, Enter biasa untuk selesai
                 input.addEventListener('keydown', (ev) => {
                     if (ev.key === 'Enter' && !ev.shiftKey) {
                         ev.preventDefault();
@@ -485,6 +499,7 @@
         canvas.addEventListener('mouseup', stopDraw);
         canvas.addEventListener('mouseout', stopDraw);
 
+        // Native support touch (Tablet & Mobile)
         canvas.addEventListener('touchstart', startDraw, { passive: false });
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', stopDraw);
@@ -534,7 +549,6 @@
 
         // Shortcuts Keyboard Update
         window.addEventListener('keydown', (e) => {
-            // Jangan memicu shortcut saat pengguna sedang mengetik teks di papan tulis
             if (activeTextInput && document.activeElement === activeTextInput) return;
             
             if (e.key.toLowerCase() === 'p') setTool('pen');
