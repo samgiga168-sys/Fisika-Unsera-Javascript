@@ -15,7 +15,7 @@
                 extend: {
                     colors: {
                         'chalk-green': '#1e402d',
-                        'chalk-border': '#3d2516', /* Warna bingkai kayu */
+                        'chalk-border': '#3d2516',
                         border: "hsl(var(--border))",
                         input: "hsl(var(--input))",
                         ring: "hsl(var(--ring))",
@@ -35,7 +35,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Variabel Warna Shadcn UI (Light & Dark) */
         :root {
             --background: 0 0% 100%;
             --foreground: 240 10% 3.9%;
@@ -51,103 +50,99 @@
             --muted-foreground: 240 5% 64.9%;
         }
 
-        /* Wrapper Papan Tulis */
+        /* Container Utama */
         .board-canvas-wrapper {
             position: relative;
             width: 100%;
-            /* Penting: height 100% dan overflow tersembunyi agar canvas tidak melebar sendiri */
             height: 100%;
             overflow: hidden;
             touch-action: none;
         }
         
-        /* Tema Light: Whiteboard Bersih */
-        .board-light {
-            background-color: #ffffff;
-        }
+        .board-light { background-color: #ffffff; }
+        .dark .board-dark { background-color: #1e402d; }
 
-        /* Tema Dark: Chalkboard */
-        .dark .board-dark {
-            background-color: #1e402d; 
-        }
-
-        /* CANVAS DIBUAT ABSOLUTE AGAR BISA SHRINK/GROW TANPA MERUSAK FLEXBOX PARENT */
+        /* Canvas Piksel (Hanya untuk Coretan) */
         canvas {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 0; left: 0;
             display: block;
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             cursor: crosshair;
+            z-index: 10;
         }
-        
-        /* Animasi Transisi Toolbar & Scroll pada Mobile */
+
+        /* Overlay Teks (Lapisan Khusus Teks Interaktif) */
+        #text-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 20;
+            /* Default tidak bisa diklik agar bisa nulis di canvas bawahnya */
+            pointer-events: none; 
+        }
+
+        /* Styling Elemen Teks */
+        .canvas-text-input {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed transparent;
+            border-radius: 4px;
+            outline: none;
+            font-family: sans-serif;
+            padding: 4px;
+            min-width: 150px;
+            min-height: 40px;
+            resize: both; /* Memunculkan tuas resize (lebar/panjang) di kanan bawah */
+            overflow: auto;
+            line-height: 1.2;
+            pointer-events: auto; /* Memungkinkan interaksi jika tool mendukung */
+            transition: border-color 0.2s;
+        }
+
+        /* Tampilan Teks saat Tool Teks atau Select (Pointer) aktif */
+        .tool-mode-text .canvas-text-input,
+        .tool-mode-select .canvas-text-input {
+            border-color: rgba(136, 136, 136, 0.4);
+        }
+
+        .tool-mode-text .canvas-text-input:focus {
+            border-color: #3b82f6 !important;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Mode Cursor / Drag */
+        .tool-mode-select .canvas-text-input {
+            cursor: move;
+            user-select: none;
+        }
+
+        /* Styling Toolbar */
         .toolbar-expanded {
-            max-width: 95vw !important; /* Adaptif untuk Mobile */
+            max-width: 95vw !important;
             opacity: 1 !important;
             padding-left: 0.5rem;
             padding-right: 0.5rem;
             margin-left: 0.5rem;
         }
         @media (min-width: 640px) {
-            .toolbar-expanded {
-                max-width: 800px !important; /* Adaptif untuk Desktop/Tablet */
-            }
+            .toolbar-expanded { max-width: 800px !important; }
         }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Menyembunyikan scrollbar di toolbar agar rapi */
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* Styling Input Ketik Teks & Kursor Resize */
-        .canvas-text-input {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(2px);
-            border: 2px dashed #888;
-            outline: none;
-            font-family: sans-serif;
-            padding: 4px;
-            z-index: 100;
-            min-width: 120px;
-            min-height: 40px;
-            resize: both; 
-            overflow: auto;
-            line-height: 1.2;
-        }
-        .canvas-text-input:focus {
-            border-color: #3b82f6; 
-        }
-        
-        /* Custom styling range slider */
-        input[type=range] {
-            -webkit-appearance: none;
-            background: transparent;
-        }
+        input[type=range] { -webkit-appearance: none; background: transparent; }
         input[type=range]::-webkit-slider-runnable-track {
-            height: 4px;
-            background: hsl(var(--border));
-            border-radius: 2px;
+            height: 4px; background: hsl(var(--border)); border-radius: 2px;
         }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: hsl(var(--foreground));
-            margin-top: -6px;
-            cursor: ew-resize;
+            -webkit-appearance: none; height: 16px; width: 16px;
+            border-radius: 50%; background: hsl(var(--foreground));
+            margin-top: -6px; cursor: ew-resize;
         }
     </style>
 
     <script>
-        // Init Theme
         try {
             const savedTheme = localStorage.getItem("theme");
             if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -168,7 +163,6 @@
             <h1 class="font-semibold text-base sm:text-lg tracking-tight hidden sm:block">Fisika UNSERA</h1>
         </div>
 
-        <!-- Board Navigator (30 Papan Tulis) -->
         <div class="flex items-center bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-md p-1">
             <button onclick="prevBoard()" class="inline-flex items-center justify-center h-8 w-8 rounded-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] hover:shadow-sm transition-all disabled:opacity-50" id="btn-prev">
                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
@@ -188,17 +182,16 @@
         </div>
     </header>
 
-    <!-- MAIN WORKSPACE: Adaptif di semua device dengan jarak pt & pb -->
+    <!-- MAIN WORKSPACE -->
     <main class="flex-1 w-full relative overflow-hidden flex flex-col pt-4 pb-[5.5rem] sm:pt-6 sm:pb-24 bg-[hsl(var(--muted))]">
-        
-        <!-- PAPAN TULIS CONTAINER -->
         <div class="board-canvas-wrapper board-light board-dark border-y-[10px] sm:border-y-[14px] md:border-y-[16px] border-x-0 border-chalk-border shadow-2xl flex-1 w-full" id="canvas-container">
             <canvas id="chalkboard"></canvas>
+            <!-- Overlay DOM untuk Teks agar bisa digeser & diubah ukurannya -->
+            <div id="text-overlay"></div>
         </div>
-        
     </main>
 
-    <!-- FLOATING TOOLBAR: Bawah Tengah -->
+    <!-- FLOATING TOOLBAR -->
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300 max-w-[95vw]">
         
         <button onclick="toggleToolbar()" id="btn-toggle-toolbar" class="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-transform active:scale-95 z-20 shrink-0 shadow-sm">
@@ -206,13 +199,17 @@
             <i data-lucide="x" id="icon-close" class="w-6 h-6 absolute opacity-0 scale-50 transition-all duration-300"></i>
         </button>
 
-        <!-- Expandable Area (Scrollable horizontal on mobile) -->
         <div id="expandable-tools" class="flex items-center max-w-0 opacity-0 px-0 overflow-x-auto hide-scrollbar transition-all duration-500 ease-in-out gap-1 z-10 shrink-0 scroll-smooth">
             
+            <!-- Alat Kursor / Geser (BARU) -->
+            <button onclick="setTool('select')" id="tool-select" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kursor / Geser Teks (V)">
+                <i data-lucide="mouse-pointer-2" class="w-5 h-5"></i>
+            </button>
+
             <button onclick="setTool('pen')" id="tool-pen" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Pulpen (P)">
                 <i data-lucide="pen" class="w-5 h-5"></i>
             </button>
-            <button onclick="setTool('text')" id="tool-text" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks / Ketik (T)">
+            <button onclick="setTool('text')" id="tool-text" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks Baru (T)">
                 <i data-lucide="text-cursor-input" class="w-5 h-5"></i>
             </button>
             <button onclick="setTool('rect')" id="tool-rect" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kotak (R)">
@@ -246,7 +243,6 @@
         </div>
     </div>
 
-    <!-- LOGIKA TEMA & RENDER ICON -->
     <script>
         lucide.createIcons();
 
@@ -274,30 +270,28 @@
                 btn.classList.remove('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
             });
             const activeBtn = document.getElementById(`btn-${theme}`);
-            if (activeBtn) {
-                activeBtn.classList.add('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
-            }
+            if (activeBtn) activeBtn.classList.add('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
         }
 
         function setTheme(mode) {
             const html = document.documentElement;
             if (mode === 'system') {
                 localStorage.removeItem('theme');
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    html.classList.add('dark');
-                } else {
-                    html.classList.remove('dark');
-                }
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) html.classList.add('dark');
+                else html.classList.remove('dark');
             } else {
                 localStorage.theme = mode;
-                if (mode === 'dark') {
-                    html.classList.add('dark');
-                } else {
-                    html.classList.remove('dark');
-                }
+                if (mode === 'dark') html.classList.add('dark');
+                else html.classList.remove('dark');
             }
             updateActiveThemeButton();
             updateCanvasContextProps();
+            
+            // Perbarui warna teks yang sudah ada
+            const isDark = document.documentElement.classList.contains('dark');
+            document.querySelectorAll('.canvas-text-input').forEach(ta => {
+                ta.style.color = isDark ? '#f8fafc' : '#0f172a';
+            });
         }
 
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
@@ -311,40 +305,35 @@
         updateActiveThemeButton();
     </script>
 
-    <!-- LOGIKA PAPAN TULIS (CANVAS) -->
+    <!-- LOGIKA PAPAN TULIS & TEKS HTML OVERLAY -->
     <script>
         const canvas = document.getElementById('chalkboard');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const container = document.getElementById('canvas-container');
+        const textOverlay = document.getElementById('text-overlay');
 
         const MAX_BOARDS = 30;
         let currentBoardIndex = 0;
-        const boardsData = new Array(MAX_BOARDS).fill(null); 
+        
+        // Data Board kini menyimpan 2 hal: Gambar coretan piksel (img) & Elemen teks HTML (html)
+        const boardsData = new Array(MAX_BOARDS).fill(null).map(() => ({ img: null, html: '' })); 
 
         let isDrawing = false;
         let currentTool = 'pen';
         let startX, startY;
         let snapshot; 
-        
-        let activeTextInput = null;
 
         // Fungsi Inti untuk Menyesuaikan Resolusi Canvas
         function applyCanvasSize() {
-            // Cek apakah ukuran benar-benar berubah untuk menghemat performa
             const newWidth = container.clientWidth;
             const newHeight = container.clientHeight;
-            
             if (canvas.width === newWidth && canvas.height === newHeight) return;
 
-            // Simpan gambar sebelum canvas direset
             const currentImgData = canvas.toDataURL(); 
-
-            // Sesuaikan ukuran asli piksel canvas
             canvas.width = newWidth;
             canvas.height = newHeight;
             updateCanvasContextProps();
             
-            // Gambar kembali coretan yang sudah ada
             if (currentImgData !== "data:,") {
                 const img = new Image();
                 img.src = currentImgData;
@@ -355,17 +344,14 @@
             }
         }
 
-        // DEBOUNCE RESIZE: Memastikan resize diproses setelah browser selesai me-layout ulang (sangat penting untuk mobile landscape/portrait)
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(applyCanvasSize, 150);
         });
-
-        // Tangkap event saat HP diputar
         window.addEventListener('orientationchange', () => {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(applyCanvasSize, 250); // Jeda sedikit lebih lama agar address bar selesai bergeser
+            resizeTimer = setTimeout(applyCanvasSize, 250);
         });
 
         function updateCanvasContextProps() {
@@ -387,41 +373,134 @@
 
         // TOOL UI UPDATE
         function setTool(tool) {
-            if (activeTextInput) activeTextInput.blur();
-            
             currentTool = tool;
+            
+            // Ubah class container untuk mengatur pointer-events CSS
+            container.className = container.className.replace(/tool-mode-\w+/g, '');
+            container.classList.add(`tool-mode-${tool}`);
+
+            // Mengatur Readonly pada Textarea (Hanya bisa ketik kalau di Mode 'Teks')
+            document.querySelectorAll('.canvas-text-input').forEach(ta => {
+                ta.readOnly = (tool !== 'text');
+            });
+
+            // Aktifkan area overlay teks jika sedang menggunakan alat Kursor atau Teks
+            if (tool === 'select' || tool === 'text') {
+                textOverlay.style.pointerEvents = 'auto';
+            } else {
+                textOverlay.style.pointerEvents = 'none';
+            }
+
             updateCanvasContextProps();
 
+            // Update UI Button
             document.querySelectorAll('.tool-btn').forEach(btn => {
                 btn.classList.remove('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
                 btn.classList.add('text-[hsl(var(--muted-foreground))]');
             });
-            
             const activeBtn = document.getElementById(`tool-${tool}`);
             if(activeBtn) {
                 activeBtn.classList.remove('text-[hsl(var(--muted-foreground))]');
                 activeBtn.classList.add('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
             }
         }
-        setTool('pen'); 
 
-        // MOUSE / TOUCH EVENTS
+        const getClientPos = (e) => {
+            return e.touches && e.touches.length > 0 ? e.touches[0] : e;
+        };
+
         const getMousePos = (e) => {
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const pos = getClientPos(e);
             return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
+                x: pos.clientX - rect.left,
+                y: pos.clientY - rect.top
             };
         };
 
+        // BIND EVENT UNTUK TEKS AGAR DISIMPAN
+        function bindTextEvents(element) {
+            element.addEventListener('input', (e) => {
+                // Simpan text ke properti value textContent untuk innerHTML
+                e.target.textContent = e.target.value;
+                saveBoardState();
+            });
+            element.addEventListener('blur', (e) => {
+                if(e.target.value.trim() === '') {
+                    e.target.remove(); // Hapus kotak kosong otomatis
+                    saveBoardState();
+                }
+            });
+            // Update posisi setelah di-resize (pojok kanan bawah)
+            element.addEventListener('mouseup', () => saveBoardState());
+            element.addEventListener('touchend', () => saveBoardState());
+        }
+
+        // FUNGSI GESER (DRAG & DROP) TEKS
+        let isDraggingItem = false;
+        let dragTarget = null;
+        let dragOffX = 0, dragOffY = 0;
+
+        textOverlay.addEventListener('mousedown', handleDragStart);
+        textOverlay.addEventListener('touchstart', handleDragStart, { passive: false });
+
+        function handleDragStart(e) {
+            if (currentTool === 'select' && e.target.classList.contains('canvas-text-input')) {
+                const rect = e.target.getBoundingClientRect();
+                const pos = getClientPos(e);
+                
+                // Mencegah drag jika user mengklik tuas Resize (pojok kanan bawah)
+                const isResizeHandle = (pos.clientX > rect.right - 20) && (pos.clientY > rect.bottom - 20);
+                
+                if (!isResizeHandle) {
+                    isDraggingItem = true;
+                    dragTarget = e.target;
+                    
+                    const containerRect = container.getBoundingClientRect();
+                    const mouseX = pos.clientX - containerRect.left;
+                    const mouseY = pos.clientY - containerRect.top;
+                    
+                    dragOffX = mouseX - parseFloat(dragTarget.style.left || 0);
+                    dragOffY = mouseY - parseFloat(dragTarget.style.top || 0);
+                    
+                    e.preventDefault(); // Mencegah teks terblok saat ditarik
+                }
+            }
+        }
+
+        window.addEventListener('mousemove', handleDragMove);
+        window.addEventListener('touchmove', handleDragMove, { passive: false });
+
+        function handleDragMove(e) {
+            if (isDraggingItem && dragTarget) {
+                const containerRect = container.getBoundingClientRect();
+                const pos = getClientPos(e);
+                const mouseX = pos.clientX - containerRect.left;
+                const mouseY = pos.clientY - containerRect.top;
+                
+                dragTarget.style.left = (mouseX - dragOffX) + 'px';
+                dragTarget.style.top = (mouseY - dragOffY) + 'px';
+                e.preventDefault();
+            }
+        }
+
+        window.addEventListener('mouseup', handleDragEnd);
+        window.addEventListener('touchend', handleDragEnd);
+
+        function handleDragEnd() {
+            if (isDraggingItem) {
+                isDraggingItem = false;
+                dragTarget = null;
+                saveBoardState();
+            }
+        }
+
+        // MOUSE/TOUCH CANVAS (MENGGAMBAR / MENGHAPUS / MEMBUAT TEKS BARU)
         const startDraw = (e) => {
             const pos = getMousePos(e);
             
-            // Logika untuk Tool Teks 
             if (currentTool === 'text') {
-                if (activeTextInput) return; 
+                if (e.target.classList.contains('canvas-text-input')) return; // Abaikan jika klik kotak yg sdh ada
                 
                 const input = document.createElement('textarea');
                 input.className = 'canvas-text-input';
@@ -436,41 +515,17 @@
                 const isDark = document.documentElement.classList.contains('dark');
                 input.style.color = isDark ? '#f8fafc' : '#0f172a';
                 
-                container.appendChild(input);
-                activeTextInput = input;
+                textOverlay.appendChild(input);
+                bindTextEvents(input);
                 
                 setTimeout(() => input.focus(), 10);
-                
-                const finalizeText = () => {
-                    if (!activeTextInput) return;
-                    const text = input.value;
-                    if (text.trim() !== '') {
-                        ctx.font = `${fontSize}px sans-serif`;
-                        ctx.fillStyle = input.style.color;
-                        ctx.textBaseline = 'top';
-                        
-                        const lines = text.split('\n');
-                        const lineHeight = fontSize * 1.2;
-                        lines.forEach((line, index) => {
-                            ctx.fillText(line, pos.x + 4, pos.y + 4 + (index * lineHeight));
-                        });
-                        saveBoardState();
-                    }
-                    input.remove();
-                    activeTextInput = null;
-                };
-
-                input.addEventListener('blur', finalizeText);
-                input.addEventListener('keydown', (ev) => {
-                    if (ev.key === 'Enter' && !ev.shiftKey) {
-                        ev.preventDefault();
-                        finalizeText();
-                    }
-                });
+                saveBoardState();
                 
                 e.preventDefault();
                 return;
             }
+
+            if (currentTool === 'select') return; // Mode select tidak menggambar
 
             isDrawing = true;
             startX = pos.x;
@@ -483,10 +538,19 @@
         };
 
         const draw = (e) => {
-            if (!isDrawing || currentTool === 'text') return;
+            if (!isDrawing) return;
             const pos = getMousePos(e);
 
-            if (currentTool === 'pen' || currentTool === 'eraser') {
+            if (currentTool === 'eraser') {
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+                
+                // Menghapus elemen teks jika tergesek penghapus
+                const targetHTML = document.elementFromPoint(getClientPos(e).clientX, getClientPos(e).clientY);
+                if (targetHTML && targetHTML.classList.contains('canvas-text-input')) {
+                    targetHTML.remove();
+                }
+            } else if (currentTool === 'pen') {
                 ctx.lineTo(pos.x, pos.y);
                 ctx.stroke();
             } else if (currentTool === 'rect' || currentTool === 'circle') {
@@ -504,31 +568,54 @@
         };
 
         const stopDraw = (e) => {
-            if (!isDrawing || currentTool === 'text') return;
+            if (!isDrawing) return;
             isDrawing = false;
             saveBoardState();
         };
 
-        canvas.addEventListener('mousedown', startDraw);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDraw);
-        canvas.addEventListener('mouseout', stopDraw);
+        // Attach Drawing Events ke Wadah Teks Overlay atau Canvas Utama
+        container.addEventListener('mousedown', startDraw);
+        container.addEventListener('mousemove', draw);
+        container.addEventListener('mouseup', stopDraw);
+        container.addEventListener('mouseout', stopDraw);
 
-        canvas.addEventListener('touchstart', startDraw, { passive: false });
-        canvas.addEventListener('touchmove', draw, { passive: false });
-        canvas.addEventListener('touchend', stopDraw);
+        container.addEventListener('touchstart', startDraw, { passive: false });
+        container.addEventListener('touchmove', draw, { passive: false });
+        container.addEventListener('touchend', stopDraw);
 
-        // BOARD MANAGEMENT LOGIC
+        // BOARD MANAGEMENT LOGIC (Simpan & Muat Ulang Board HTML + Piksel)
         function saveBoardState() {
-            boardsData[currentBoardIndex] = canvas.toDataURL();
+            // Update atribut textContent agar innerHTML menyimpan value ketikan saat ini
+            document.querySelectorAll('#text-overlay textarea').forEach(ta => {
+                ta.textContent = ta.value;
+            });
+            
+            boardsData[currentBoardIndex] = {
+                img: canvas.toDataURL(),
+                html: textOverlay.innerHTML
+            };
         }
 
-        function restoreBoardState(dataUrl) {
+        function restoreBoardState(data) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (dataUrl) {
-                const img = new Image();
-                img.src = dataUrl;
-                img.onload = () => ctx.drawImage(img, 0, 0);
+            if (data) {
+                // Restore Coretan
+                if (data.img && data.img !== "data:,") {
+                    const img = new Image();
+                    img.src = data.img;
+                    img.onload = () => ctx.drawImage(img, 0, 0);
+                }
+                // Restore Kotak Teks
+                textOverlay.innerHTML = data.html || '';
+                
+                // Re-bind Events karena HTML diinjeksi ulang
+                document.querySelectorAll('#text-overlay textarea').forEach(ta => {
+                    ta.value = ta.textContent; // Kembalikan valuenya
+                    bindTextEvents(ta);
+                    ta.readOnly = (currentTool !== 'text');
+                });
+            } else {
+                textOverlay.innerHTML = '';
             }
         }
 
@@ -558,11 +645,15 @@
 
         function clearBoard() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            textOverlay.innerHTML = '';
             saveBoardState();
         }
 
+        // Shortcuts Keyboard
         window.addEventListener('keydown', (e) => {
-            if (activeTextInput && document.activeElement === activeTextInput) return;
+            if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
+            
+            if (e.key.toLowerCase() === 'v') setTool('select');
             if (e.key.toLowerCase() === 'p') setTool('pen');
             if (e.key.toLowerCase() === 't') setTool('text');
             if (e.key.toLowerCase() === 'r') setTool('rect');
@@ -575,6 +666,7 @@
         // INIT
         window.onload = () => {
             applyCanvasSize();
+            setTool('pen'); // Set tool bawaan
             updateBoardUI();
         };
     </script>
