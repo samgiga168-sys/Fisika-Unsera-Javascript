@@ -1,349 +1,556 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Halaman Utama">
-    <title>Halaman Utama</title>
+    <meta name="description" content="Papan Tulis Interaktif - Fisika UNSERA">
+    <title>Chalkboard Workspace - Fisika UNSERA</title>
 
-    <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
-
-    <!-- THEME SCRIPT -->
-    <script>
-        try {
-            const savedTheme = localStorage.getItem("theme");
-            if (savedTheme) {
-                document.documentElement.setAttribute("data-theme", savedTheme);
-            }
-        } catch (e) {}
-    </script>
-
-    <!-- TAILWIND CSS LOKAL & CONFIG -->
-    <script src="../../static/js/tailwindcss/tailwindcss.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: ['selector', '[data-theme="dark"]'],
+            darkMode: ['class'],
             theme: {
-                extend: {}
+                extend: {
+                    colors: {
+                        'chalk-green': '#1e402d',
+                        'chalk-border': '#3d2516', /* Warna bingkai kayu */
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                        muted: {
+                            DEFAULT: "hsl(var(--muted))",
+                            foreground: "hsl(var(--muted-foreground))",
+                        },
+                    }
+                }
             }
         }
     </script>
 
-    <!-- Alpine Plugins LOKAL -->
-    <script defer src="../../static/js/alpine-collapse.min.js"></script>
-    <!-- Alpine.js CSP -->
-    <script defer src="../../static/js/alpine.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- KONFIGURASI & LOAD MATHJAX -->
+    <style>
+        /* Variabel Warna Shadcn UI (Light & Dark) */
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 240 10% 3.9%;
+            --border: 240 5.9% 90%;
+            --muted: 240 4.8% 95.9%;
+            --muted-foreground: 240 3.8% 46.1%;
+        }
+        .dark {
+            --background: 240 10% 3.9%;
+            --foreground: 0 0% 98%;
+            --border: 240 3.7% 15.9%;
+            --muted: 240 3.7% 15.9%;
+            --muted-foreground: 240 5% 64.9%;
+        }
+
+        /* Wrapper Papan Tulis */
+        .board-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            touch-action: none;
+        }
+        
+        /* Tema Light: Whiteboard Bersih (Tanpa Titik) */
+        .board-light {
+            background-color: #ffffff;
+        }
+
+        /* Tema Dark: Chalkboard MIT Style (Tanpa Titik) */
+        .dark .board-dark {
+            background-color: #1e402d; 
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        
+        /* Animasi Transisi Toolbar */
+        .toolbar-expanded {
+            max-width: 800px !important; 
+            opacity: 1 !important;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Styling Input Ketik Teks & Kursor Resize */
+        .canvas-text-input {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(2px);
+            border: 2px dashed #888;
+            outline: none;
+            font-family: sans-serif;
+            padding: 4px;
+            z-index: 100;
+            min-width: 150px;
+            min-height: 40px;
+            resize: both; /* Memberikan kursor drag untuk melebarkan di pojok kanan bawah */
+            overflow: auto;
+            line-height: 1.2;
+        }
+        .canvas-text-input:focus {
+            border-color: #3b82f6; /* Warna fokus biru */
+        }
+        
+        /* Custom styling range slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: hsl(var(--border));
+            border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: hsl(var(--foreground));
+            margin-top: -6px;
+            cursor: ew-resize;
+        }
+    </style>
+
     <script>
-        MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                processEscapes: true
-            },
-            svg: {
-                fontCache: 'global'
+        // Init Theme
+        try {
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add("dark");
             }
-        };
+        } catch (e) {}
     </script>
-    <script type="text/javascript" id="MathJax-script" async src="../../static/js/mathjax/tex-svg.js"></script>
-
 </head>
 
-<body class="min-h-screen flex flex-col bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200 relative">
+<body class="h-screen w-screen flex flex-col bg-[hsl(var(--background))] text-[hsl(var(--foreground))] transition-colors duration-300 overflow-hidden">
 
-    <!-- OVERLAY CANVAS UNTUK CORETAN -->
-    <div x-data="canvasDraw" @clear-canvas.window="clearCanvas">
-        <canvas
-            x-ref="canvas"
-            class="fixed top-0 left-0 w-full h-full z-40 transition-colors"
-            :class="{ 'pointer-events-none': !$store.drawState.active, 'pointer-events-auto cursor-crosshair': $store.drawState.active }"
-            @mousedown="startDrawing"
-            @mousemove="draw"
-            @mouseup="stopDrawing"
-            @mouseleave="stopDrawing"
-        ></canvas>
-    </div>
-
-    <!-- KOMPONEN HEADER (Telah digabung langsung) -->
-    <header x-data="headerMenu" class="bg-blue-600 dark:bg-blue-900 text-white shadow-md relative z-50">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            
-            <!-- Logo -->
-            <div class="text-xl font-bold tracking-wider">
-                <!-- Tempat logo kosong -->
+    <!-- HEADER: Navigasi Board -->
+    <header class="h-16 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 sm:px-6 bg-[hsl(var(--background))] z-10 shadow-sm shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-chalk-green text-white flex items-center justify-center font-bold">
+                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
             </div>
+            <h1 class="font-semibold text-lg tracking-tight hidden sm:block">Fisika UNSERA</h1>
+        </div>
 
-            <!-- Toolbar / Menu -->
-            <div class="flex items-center space-x-4 md:space-x-6">
-                
-                <!-- Opsi Alat Gambar -->
-                <div class="relative">
-                    <!-- Tombol Trigger Dropdown -->
-                    <button @click="toggleDropdown" @click.outside="closeDropdown" class="flex items-center space-x-2 hover:text-blue-200 transition focus:outline-none focus:ring-0" title="Alat Gambar">
-                        <!-- Ikon Pulpen/Pensil -->
-                        <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                        <span class="hidden md:inline font-medium">Alat Gambar</span>
-                        
-                        <!-- Indikator Aktif -->
-                        <span x-show="$store.drawState.active" class="flex w-2 h-2 rounded-full bg-red-400"></span>
-                        
-                        <!-- Ikon Panah Bawah -->
-                        <svg class="w-4 h-4 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-
-                    <!-- Menu Dropdown -->
-                    <div x-show="openDropdown" 
-                         x-transition.opacity.duration.200ms
-                         style="display: none;" 
-                         class="absolute right-0 mt-3 w-64 bg-white dark:bg-gray-800 rounded-md shadow-xl py-2 z-50 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 flex flex-col">
-                        
-                        <!-- Opsi: Pulpen -->
-                        <button @click="setDrawTool('pencil')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                                </svg>
-                                <span>Pulpen Bebas</span>
-                            </div>
-                            <svg x-show="$store.drawState.active && $store.drawState.tool === 'pencil'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
-                            </svg>
-                        </button>
-
-                        <!-- Opsi: Rectangle (Garis) -->
-                        <button @click="setDrawTool('rectangle')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16v12H4z"></path>
-                                </svg>
-                                <span>Kotak (Garis)</span>
-                            </div>
-                            <svg x-show="$store.drawState.active && $store.drawState.tool === 'rectangle'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
-                            </svg>
-                        </button>
-
-                        <!-- Opsi: Rectangle Blok (Solid) -->
-                        <button @click="setDrawTool('filled-rectangle')" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between transition focus:outline-none focus:ring-0 text-left">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M4 6h16v12H4z"></path>
-                                </svg>
-                                <span>Kotak Blok (Solid)</span>
-                            </div>
-                            <svg x-show="$store.drawState.active && $store.drawState.tool === 'filled-rectangle'" class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.828 3h3.982a2 2 0 011.992 2.181l-.637 7A2 2 0 0113.174 14H11v4a1 1 0 11-2 0v-4H6.826a2 2 0 01-1.991-1.819l-.637-7A2 2 0 016.19 3h3.638z" />
-                            </svg>
-                        </button>
-
-                        <hr class="my-1 border-gray-200 dark:border-gray-600">
-
-                        <!-- Opsi: Hapus Semua Coretan -->
-                        <button @click="clearCanvas" class="w-full px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center space-x-3 transition focus:outline-none focus:ring-0 text-left">
-                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            <span>Hapus Coretan</span>
-                        </button>
-
-                        <!-- Opsi: Matikan Mode Gambar -->
-                        <button @click="disableDraw" class="w-full px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 transition focus:outline-none focus:ring-0 text-left">
-                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span>Matikan Mode Gambar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Opsi Papan Tulis / Board -->
-                <button class="flex items-center space-x-2 hover:text-blue-200 transition focus:outline-none focus:ring-0" title="Buka Papan Tulis">
-                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
-                    </svg>
-                    <span class="hidden md:inline font-medium">Papan Tulis</span>
-                </button>
-                
+        <!-- Board Navigator (30 Papan Tulis) -->
+        <div class="flex items-center bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-md p-1">
+            <button onclick="prevBoard()" class="inline-flex items-center justify-center h-8 w-8 rounded-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] hover:shadow-sm transition-all disabled:opacity-50" id="btn-prev">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <div class="px-3 sm:px-4 text-sm font-medium tabular-nums flex items-center justify-center min-w-[90px]">
+                Board <span id="current-board-label" class="ml-1 mr-1">1</span> / 30
             </div>
+            <button onclick="nextBoard()" class="inline-flex items-center justify-center h-8 w-8 rounded-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] hover:shadow-sm transition-all disabled:opacity-50" id="btn-next">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+        
+        <div class="flex justify-end">
+             <button onclick="clearBoard()" class="inline-flex items-center justify-center h-9 px-3 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4 sm:mr-2"></i> <span class="hidden sm:inline">Bersihkan</span>
+            </button>
         </div>
     </header>
 
-    <!-- KONTEN UTAMA HALAMAN -->
-    <main class="flex-grow container mx-auto px-4 py-8 space-y-8 relative z-30">
+    <!-- MAIN WORKSPACE: Flex Center -->
+    <main class="flex-1 w-full relative overflow-hidden flex items-center justify-center bg-[hsl(var(--muted))]">
         
-        <div x-data="mainContent" class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md">
-            <h1 class="text-3xl font-bold mb-4 text-blue-600 dark:text-blue-400">Selamat Datang</h1>
-            <p class="mb-4">Ini adalah halaman utama index.html yang memuat komponen secara dinamis menggunakan Alpine CSP.</p>
-            
-            <button @click="toggle" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition relative z-30">
-                <span x-text="buttonText"></span>
-            </button>
-
-            <div x-show="open" x-collapse x-cloak class="mt-4 p-4 bg-white dark:bg-gray-700 rounded border dark:border-gray-600">
-                <p>Fitur x-collapse Alpine JS CSP bekerja dengan baik bersama Tailwind CSS.</p>
-            </div>
+        <!-- PAPAN TULIS: Rata Kanan-Kiri (w-full), Tidak Rata Atas-Bawah (h-[75vh]), Bingkai atas & bawah (border-y) -->
+        <div class="board-canvas-wrapper board-light board-dark border-y-[12px] sm:border-y-[16px] border-x-0 border-chalk-border shadow-2xl w-full h-[70vh] sm:h-[75vh]" id="canvas-container">
+            <canvas id="chalkboard"></canvas>
         </div>
-
-        <!-- Contoh Implementasi MathJax -->
-        <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md overflow-x-auto">
-            <h2 class="text-2xl font-bold mb-4 text-green-600 dark:text-green-400">Rumus Aljabar Linier (MathJax)</h2>
-            <div class="space-y-6">
-                <!-- Contoh 1 -->
-                <div class="p-4 bg-white dark:bg-gray-700 rounded border dark:border-gray-600">
-                    <h3 class="font-semibold mb-2">Sistem Persamaan Linier ($A\mathbf{x} = \mathbf{b}$)</h3>
-                    <div class="text-center overflow-x-auto">
-                        $$ \begin{bmatrix} a_{11} & a_{12} & a_{13} \\ a_{21} & a_{22} & a_{23} \\ a_{31} & a_{32} & a_{33} \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \\ x_3 \end{bmatrix} = \begin{bmatrix} b_1 \\ b_2 \\ b_3 \end{bmatrix} $$
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        
     </main>
 
-    <!-- LOGIKA ALPINE CSP -->
-    <script>
-        document.addEventListener('alpine:init', () => {
+    <!-- FLOATING TOOLBAR: Bawah Tengah -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300">
+        
+        <!-- Toggle Menu Button (Titik Satu) -->
+        <button onclick="toggleToolbar()" id="btn-toggle-toolbar" class="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-transform active:scale-95 z-20 shrink-0 shadow-sm">
+            <i data-lucide="more-horizontal" id="icon-menu" class="w-6 h-6 absolute transition-all duration-300"></i>
+            <i data-lucide="x" id="icon-close" class="w-6 h-6 absolute opacity-0 scale-50 transition-all duration-300"></i>
+        </button>
+
+        <!-- Hidden Expandable Area (Tools, Size & Themes) -->
+        <div id="expandable-tools" class="flex items-center max-w-0 opacity-0 px-0 overflow-hidden transition-all duration-500 ease-in-out gap-1 z-10 shrink-0">
             
-            // State global untuk alat gambar
-            Alpine.store('drawState', {
-                active: false,
-                tool: 'pencil' // 'pencil', 'rectangle', atau 'filled-rectangle'
+            <!-- Drawing Tools -->
+            <button onclick="setTool('pen')" id="tool-pen" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Pulpen (P)">
+                <i data-lucide="pen" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('text')" id="tool-text" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks / Ketik (T)">
+                <i data-lucide="text-cursor-input" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('rect')" id="tool-rect" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kotak (R)">
+                <i data-lucide="square" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('circle')" id="tool-circle" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Lingkaran (C)">
+                <i data-lucide="circle" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Penghapus (E)">
+                <i data-lucide="eraser" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Divider -->
+            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-2"></div>
+
+            <!-- Size / Thickness Slider -->
+            <div class="flex items-center gap-2 px-2" title="Ketebalan / Ukuran Font">
+                <i data-lucide="scaling" class="w-4 h-4 text-[hsl(var(--muted-foreground))]"></i>
+                <input type="range" id="tool-size" min="1" max="50" value="4" class="w-20 sm:w-28" oninput="updateCanvasContextProps()">
+            </div>
+
+            <!-- Divider -->
+            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-2"></div>
+
+            <!-- Theme Toggles -->
+            <button onclick="setTheme('light')" id="btn-light" class="theme-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Light Mode">
+                <i data-lucide="sun" class="h-4 w-4"></i>
+            </button>
+            <button onclick="setTheme('system')" id="btn-system" class="theme-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="System Mode">
+                <i data-lucide="monitor" class="h-4 w-4"></i>
+            </button>
+            <button onclick="setTheme('dark')" id="btn-dark" class="theme-btn inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Dark Mode">
+                <i data-lucide="moon" class="h-4 w-4"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- LOGIKA TEMA & RENDER ICON -->
+    <script>
+        lucide.createIcons();
+
+        // Logika Toggle Toolbar Bawah
+        let isToolbarOpen = false;
+        function toggleToolbar() {
+            isToolbarOpen = !isToolbarOpen;
+            const menuArea = document.getElementById('expandable-tools');
+            const iconMenu = document.getElementById('icon-menu');
+            const iconClose = document.getElementById('icon-close');
+            
+            if (isToolbarOpen) {
+                menuArea.classList.add('toolbar-expanded');
+                iconMenu.classList.add('opacity-0', 'scale-50');
+                iconClose.classList.remove('opacity-0', 'scale-50');
+            } else {
+                menuArea.classList.remove('toolbar-expanded');
+                iconMenu.classList.remove('opacity-0', 'scale-50');
+                iconClose.classList.add('opacity-0', 'scale-50');
+            }
+        }
+
+        function updateActiveThemeButton() {
+            const theme = localStorage.getItem('theme') || 'system';
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.remove('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
             });
+            const activeBtn = document.getElementById(`btn-${theme}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
+            }
+        }
 
-            // Komponen Logika Canvas
-            Alpine.data('canvasDraw', () => ({
-                isDrawing: false,
-                ctx: null,
-                startX: 0,
-                startY: 0,
-                savedImageData: null,
-
-                init() {
-                    this.ctx = this.$refs.canvas.getContext('2d');
-                    this.resizeCanvas();
-                    window.addEventListener('resize', () => this.resizeCanvas());
-                },
-                resizeCanvas() {
-                    const canvas = this.$refs.canvas;
-                    let imgData = null;
-                    if (this.ctx && canvas.width > 0) {
-                        imgData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    }
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
-                    
-                    // Setting dasar coretan
-                    this.ctx.lineWidth = 3;
-                    this.ctx.lineCap = 'round';
-                    this.ctx.strokeStyle = '#ef4444'; // Warna merah
-                    this.ctx.fillStyle = '#ef4444'; // Warna merah solid
-                    
-                    if (imgData) {
-                        this.ctx.putImageData(imgData, 0, 0);
-                    }
-                },
-                startDrawing(e) {
-                    if (!this.$store.drawState.active) return;
-                    this.isDrawing = true;
-                    this.startX = e.clientX;
-                    this.startY = e.clientY;
-                    this.savedImageData = this.ctx.getImageData(0, 0, this.$refs.canvas.width, this.$refs.canvas.height);
-
-                    if (this.$store.drawState.tool === 'pencil') {
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(this.startX, this.startY);
-                    }
-                },
-                draw(e) {
-                    if (!this.isDrawing) return;
-
-                    if (this.$store.drawState.tool === 'pencil') {
-                        this.ctx.lineTo(e.clientX, e.clientY);
-                        this.ctx.stroke();
-                    } else if (this.$store.drawState.tool === 'rectangle') {
-                        this.ctx.putImageData(this.savedImageData, 0, 0);
-                        this.ctx.beginPath();
-                        this.ctx.rect(this.startX, this.startY, e.clientX - this.startX, e.clientY - this.startY);
-                        this.ctx.stroke();
-                    } else if (this.$store.drawState.tool === 'filled-rectangle') {
-                        this.ctx.putImageData(this.savedImageData, 0, 0);
-                        this.ctx.beginPath();
-                        this.ctx.rect(this.startX, this.startY, e.clientX - this.startX, e.clientY - this.startY);
-                        this.ctx.fill();
-                    }
-                },
-                stopDrawing() {
-                    this.isDrawing = false;
-                },
-                clearCanvas() {
-                    this.ctx.clearRect(0, 0, this.$refs.canvas.width, this.$refs.canvas.height);
+        function setTheme(mode) {
+            const html = document.documentElement;
+            if (mode === 'system') {
+                localStorage.removeItem('theme');
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    html.classList.add('dark');
+                } else {
+                    html.classList.remove('dark');
                 }
-            }));
-
-            // Komponen untuk memuat file HTML eksternal (Footer)
-            Alpine.data('loadComponent', (url) => ({
-                html: '',
-                init() {
-                    fetch(url)
-                        .then(response => {
-                            if (!response.ok) throw new Error('Gagal memuat ' + url);
-                            return response.text();
-                        })
-                        .then(data => {
-                            this.html = data;
-                        })
-                        .catch(error => console.error('Error memuat komponen:', error));
+            } else {
+                localStorage.theme = mode;
+                if (mode === 'dark') {
+                    html.classList.add('dark');
+                } else {
+                    html.classList.remove('dark');
                 }
-            }));
+            }
+            updateActiveThemeButton();
+            updateCanvasContextProps();
+        }
 
-            // Komponen untuk Halaman Utama
-            Alpine.data('mainContent', () => ({
-                open: false,
-                toggle() {
-                    this.open = !this.open;
-                },
-                get buttonText() {
-                    return this.open ? 'Tutup Info' : 'Buka Info Tambahan';
-                }
-            }));
-
-            // Komponen untuk Header
-            Alpine.data('headerMenu', () => ({
-                mobileMenuOpen: false,
-                openDropdown: false, 
-                
-                toggleMenu() {
-                    this.mobileMenuOpen = !this.mobileMenuOpen;
-                },
-
-                // FUNGSI KHUSUS UNTUK MEMENUHI ATURAN CSP
-                toggleDropdown() {
-                    this.openDropdown = !this.openDropdown;
-                },
-                closeDropdown() {
-                    this.openDropdown = false;
-                },
-                setDrawTool(tool) {
-                    this.$store.drawState.active = true;
-                    this.$store.drawState.tool = tool;
-                    this.openDropdown = false;
-                },
-                disableDraw() {
-                    this.$store.drawState.active = false;
-                    this.openDropdown = false;
-                },
-                clearCanvas() {
-                    window.dispatchEvent(new CustomEvent('clear-canvas'));
-                    this.openDropdown = false;
-                }
-            }));
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (!localStorage.getItem('theme')) {
+                if (e.matches) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                updateCanvasContextProps();
+            }
         });
+
+        updateActiveThemeButton();
+    </script>
+
+    <!-- LOGIKA PAPAN TULIS (CANVAS) -->
+    <script>
+        const canvas = document.getElementById('chalkboard');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        // State Aplikasi
+        const MAX_BOARDS = 30;
+        let currentBoardIndex = 0;
+        const boardsData = new Array(MAX_BOARDS).fill(null); 
+
+        let isDrawing = false;
+        let currentTool = 'pen';
+        let startX, startY;
+        let snapshot; 
+        
+        // Elemen input teks aktif
+        let activeTextInput = null;
+
+        // Setup Canvas Size
+        function resizeCanvas() {
+            const tempImg = boardsData[currentBoardIndex];
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            updateCanvasContextProps();
+            if (tempImg) restoreBoardState(tempImg);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function updateCanvasContextProps() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const toolSize = parseInt(document.getElementById('tool-size').value);
+            
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            if (currentTool === 'eraser') {
+                ctx.globalCompositeOperation = "destination-out";
+                ctx.lineWidth = toolSize * 5; // Penghapus lebih besar dari pulpen
+            } else {
+                ctx.globalCompositeOperation = "source-over";
+                ctx.lineWidth = toolSize;
+                ctx.strokeStyle = isDark ? '#f8fafc' : '#0f172a'; 
+            }
+        }
+
+        // TOOL UI UPDATE
+        function setTool(tool) {
+            // Jika ada input teks aktif, paksa selesai (blur/render ke canvas)
+            if (activeTextInput) {
+                activeTextInput.blur();
+            }
+            
+            currentTool = tool;
+            updateCanvasContextProps();
+
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
+                btn.classList.add('text-[hsl(var(--muted-foreground))]');
+            });
+            
+            const activeBtn = document.getElementById(`tool-${tool}`);
+            if(activeBtn) {
+                activeBtn.classList.remove('text-[hsl(var(--muted-foreground))]');
+                activeBtn.classList.add('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
+            }
+        }
+        setTool('pen'); // Default
+
+        // MOUSE / TOUCH EVENTS
+        const getMousePos = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        };
+
+        const startDraw = (e) => {
+            const pos = getMousePos(e);
+            
+            // Logika untuk Tool Teks (Textarea Multiline & Resizable)
+            if (currentTool === 'text') {
+                if (activeTextInput) return; 
+                
+                const input = document.createElement('textarea');
+                input.className = 'canvas-text-input';
+                
+                // Ambil ukuran font dari slider
+                const toolSize = parseInt(document.getElementById('tool-size').value);
+                const fontSize = Math.max(16, toolSize * 4); // Minimal 16px
+                input.style.fontSize = fontSize + 'px';
+                
+                // Posisikan textarea di koordinat klik
+                input.style.left = pos.x + 'px';
+                input.style.top = pos.y + 'px'; 
+                
+                // Samakan warna teks dengan tema
+                const isDark = document.documentElement.classList.contains('dark');
+                input.style.color = isDark ? '#f8fafc' : '#0f172a';
+                
+                container.appendChild(input);
+                activeTextInput = input;
+                
+                setTimeout(() => input.focus(), 10);
+                
+                const finalizeText = () => {
+                    if (!activeTextInput) return;
+                    const text = input.value;
+                    if (text.trim() !== '') {
+                        ctx.font = `${fontSize}px sans-serif`;
+                        ctx.fillStyle = input.style.color;
+                        ctx.textBaseline = 'top';
+                        
+                        // Render per baris (multiline support)
+                        const lines = text.split('\n');
+                        const lineHeight = fontSize * 1.2;
+                        lines.forEach((line, index) => {
+                            ctx.fillText(line, pos.x + 4, pos.y + 4 + (index * lineHeight));
+                        });
+                        
+                        saveBoardState();
+                    }
+                    input.remove();
+                    activeTextInput = null;
+                };
+
+                // Blur / klik di luar akan menempelkan teks
+                input.addEventListener('blur', finalizeText);
+                
+                // Shift+Enter untuk baris baru, Enter biasa untuk selesai
+                input.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter' && !ev.shiftKey) {
+                        ev.preventDefault();
+                        finalizeText();
+                    }
+                });
+                
+                e.preventDefault();
+                return;
+            }
+
+            isDrawing = true;
+            startX = pos.x;
+            startY = pos.y;
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            e.preventDefault();
+        };
+
+        const draw = (e) => {
+            if (!isDrawing || currentTool === 'text') return;
+            const pos = getMousePos(e);
+
+            if (currentTool === 'pen' || currentTool === 'eraser') {
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            } else if (currentTool === 'rect' || currentTool === 'circle') {
+                ctx.putImageData(snapshot, 0, 0);
+                ctx.beginPath();
+                if (currentTool === 'rect') {
+                    ctx.rect(startX, startY, pos.x - startX, pos.y - startY);
+                } else if (currentTool === 'circle') {
+                    const radius = Math.sqrt(Math.pow(pos.x - startX, 2) + Math.pow(pos.y - startY, 2));
+                    ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+                }
+                ctx.stroke();
+            }
+            e.preventDefault();
+        };
+
+        const stopDraw = (e) => {
+            if (!isDrawing || currentTool === 'text') return;
+            isDrawing = false;
+            saveBoardState();
+        };
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseout', stopDraw);
+
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDraw);
+
+        // BOARD MANAGEMENT LOGIC
+        function saveBoardState() {
+            boardsData[currentBoardIndex] = canvas.toDataURL();
+        }
+
+        function restoreBoardState(dataUrl) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (dataUrl) {
+                const img = new Image();
+                img.src = dataUrl;
+                img.onload = () => ctx.drawImage(img, 0, 0);
+            }
+        }
+
+        function updateBoardUI() {
+            document.getElementById('current-board-label').innerText = currentBoardIndex + 1;
+            document.getElementById('btn-prev').disabled = currentBoardIndex === 0;
+            document.getElementById('btn-next').disabled = currentBoardIndex === MAX_BOARDS - 1;
+        }
+
+        function nextBoard() {
+            if (currentBoardIndex < MAX_BOARDS - 1) {
+                saveBoardState();
+                currentBoardIndex++;
+                restoreBoardState(boardsData[currentBoardIndex]);
+                updateBoardUI();
+            }
+        }
+
+        function prevBoard() {
+            if (currentBoardIndex > 0) {
+                saveBoardState();
+                currentBoardIndex--;
+                restoreBoardState(boardsData[currentBoardIndex]);
+                updateBoardUI();
+            }
+        }
+
+        function clearBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            saveBoardState();
+        }
+
+        // Shortcuts Keyboard Update
+        window.addEventListener('keydown', (e) => {
+            // Jangan memicu shortcut saat pengguna sedang mengetik teks di papan tulis
+            if (activeTextInput && document.activeElement === activeTextInput) return;
+            
+            if (e.key.toLowerCase() === 'p') setTool('pen');
+            if (e.key.toLowerCase() === 't') setTool('text');
+            if (e.key.toLowerCase() === 'r') setTool('rect');
+            if (e.key.toLowerCase() === 'c') setTool('circle');
+            if (e.key.toLowerCase() === 'e') setTool('eraser');
+            if (e.key === 'ArrowRight') nextBoard();
+            if (e.key === 'ArrowLeft') prevBoard();
+        });
+
+        // INIT
+        window.onload = () => {
+            resizeCanvas();
+            updateBoardUI();
+        };
     </script>
 </body>
 </html>
