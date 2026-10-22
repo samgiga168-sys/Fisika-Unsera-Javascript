@@ -34,6 +34,13 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Setup PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
     <style>
         :root {
             --background: 0 0% 100%;
@@ -181,7 +188,6 @@
             <div class="w-8 h-8 rounded bg-chalk-green text-white flex items-center justify-center font-bold shrink-0">
                 <i data-lucide="graduation-cap" class="w-5 h-5"></i>
             </div>
-            <h1 class="font-semibold text-base sm:text-lg tracking-tight hidden sm:block">Fisika UNSERA</h1>
         </div>
 
         <div class="flex items-center bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-md p-1">
@@ -196,8 +202,15 @@
             </button>
         </div>
         
-        <div class="flex justify-end">
-             <button onclick="clearBoard()" class="inline-flex items-center justify-center h-9 px-3 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors">
+        <div class="flex justify-end items-center gap-2">
+
+            <!-- Input File & Tombol Upload -->
+            <input type="file" id="upload-file" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload(event)">
+            <button onclick="document.getElementById('upload-file').click()" class="inline-flex items-center justify-center h-9 px-3 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-[hsl(var(--muted))] transition-colors">
+                <i data-lucide="upload" class="w-4 h-4 sm:mr-2"></i> <span class="hidden sm:inline">Upload PDF</span>
+            </button>
+
+            <button onclick="clearBoard()" class="inline-flex items-center justify-center h-9 px-3 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors">
                 <i data-lucide="trash-2" class="w-4 h-4 sm:mr-2"></i> <span class="hidden sm:inline">Bersihkan</span>
             </button>
         </div>
@@ -205,8 +218,23 @@
 
     <!-- MAIN WORKSPACE -->
     <main class="flex-1 w-full relative overflow-hidden flex flex-col pt-4 pb-[5.5rem] sm:pt-6 sm:pb-24 bg-[hsl(var(--muted))]">
+        
+        <!-- Kontrol Halaman PDF (Desain Floating Pill Responsif) -->
+        <div id="pdf-controls" class="hidden absolute bottom-24 sm:bottom-28 lg:bottom-auto lg:top-6 left-1/2 -translate-x-1/2 z-40 items-center gap-1.5 bg-[hsl(var(--background))] border border-[hsl(var(--border))] shadow-md rounded-full px-3 py-1.5 transition-all">
+            <div class="flex items-center justify-center text-red-500 mr-1" title="PDF Mode Aktif">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+            </div>
+            <button onclick="prevPdfPage()" class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:opacity-80 active:scale-95 transition-all shadow-sm">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <span id="pdf-page-num" class="text-sm font-bold px-2 tabular-nums text-center min-w-[3.5rem]">1 / 1</span>
+            <button onclick="nextPdfPage()" class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] hover:opacity-80 active:scale-95 transition-all shadow-sm">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+
         <div class="board-canvas-wrapper board-light board-dark border-y-[10px] sm:border-y-[14px] md:border-y-[16px] border-x-0 border-chalk-border shadow-2xl flex-1 w-full" id="canvas-container">
-            <canvas id="chalkboard"></canvas>
+            <canvas id="chalkboard" class="dark:invert"></canvas>
             <div id="text-overlay"></div>
             
             <!-- Transform Box (Bingkai Resize) -->
@@ -288,6 +316,22 @@
         </div>
     </div>
 
+    <!-- TOMBOL BACKUP & IMPORT (Kanan Bawah) -->
+    <!-- Tambahkan id="backup-container" dan transition-all duration-300 -->
+    <div id="backup-container" class="fixed bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2 transition-all duration-300">
+        <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
+        
+        <button onclick="document.getElementById('import-file').click()" class="inline-flex items-center justify-center h-12 w-12 sm:h-10 sm:w-auto sm:px-4 rounded-full bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] shadow-md hover:bg-[hsl(var(--muted))] transition-colors" title="Import File JSON">
+            <i data-lucide="folder-up" class="w-5 h-5 sm:mr-2"></i> 
+            <span class="hidden sm:inline text-sm font-medium">Import</span>
+        </button>
+        
+        <button onclick="exportData()" class="inline-flex items-center justify-center h-12 w-12 sm:h-10 sm:w-auto sm:px-4 rounded-full bg-chalk-green text-white shadow-md hover:opacity-90 transition-colors" title="Backup ke JSON">
+            <i data-lucide="save" class="w-5 h-5 sm:mr-2"></i> 
+            <span class="hidden sm:inline text-sm font-medium">Backup</span>
+        </button>
+    </div>
+
     <!-- PENGATURAN UI TEMA DLL -->
     <script>
         lucide.createIcons();
@@ -298,15 +342,26 @@
             const menuArea = document.getElementById('expandable-tools');
             const iconMenu = document.getElementById('icon-menu');
             const iconClose = document.getElementById('icon-close');
+            const backupContainer = document.getElementById('backup-container');
             
             if (isToolbarOpen) {
                 menuArea.classList.add('toolbar-expanded');
                 iconMenu.classList.add('opacity-0', 'scale-50');
                 iconClose.classList.remove('opacity-0', 'scale-50');
+                
+                // Sembunyikan tombol backup
+                if(backupContainer) {
+                    backupContainer.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }
             } else {
                 menuArea.classList.remove('toolbar-expanded');
                 iconMenu.classList.remove('opacity-0', 'scale-50');
                 iconClose.classList.add('opacity-0', 'scale-50');
+                
+                // Munculkan kembali tombol backup
+                if(backupContainer) {
+                    backupContainer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }
             }
         }
 
@@ -406,7 +461,8 @@
 
         const MAX_BOARDS = 30;
         let currentBoardIndex = 0;
-        const boardsData = new Array(MAX_BOARDS).fill(null).map(() => ({ img: null, html: '' })); 
+        // Tambahkan pdfStates: {} untuk menampung coretan per halaman PDF
+        const boardsData = new Array(MAX_BOARDS).fill(null).map(() => ({ img: null, html: '', pdfStates: {} }));
 
         let isDrawing = false;
         let currentTool = 'pen';
@@ -445,7 +501,6 @@
         });
         
         function updateCanvasContextProps() {
-            const isDark = document.documentElement.classList.contains('dark');
             const toolSize = parseInt(document.getElementById('tool-size').value);
             
             ctx.lineCap = 'round';
@@ -457,7 +512,9 @@
             } else {
                 ctx.globalCompositeOperation = "source-over";
                 ctx.lineWidth = toolSize;
-                ctx.strokeStyle = isDark ? '#f8fafc' : '#0f172a'; 
+                // Selalu gambar dengan warna hitam pekat. 
+                // Saat mode gelap, class 'dark:invert' akan mengubahnya menjadi putih murni secara otomatis.
+                ctx.strokeStyle = '#000000'; 
             }
         }
 
@@ -828,11 +885,16 @@
                 ta.textContent = ta.value;
             });
             
-            boardsData[currentBoardIndex] = {
-                img: canvas.toDataURL(),
-                // Ini hanya menyimpan textOverlay, Transform Box kita aman diluar itu
-                html: textOverlay.innerHTML 
-            };
+            // PERBAIKAN: Update nilai tanpa merusak struktur objek pdfStates
+            if (!boardsData[currentBoardIndex]) {
+                boardsData[currentBoardIndex] = { img: null, html: '', pdfStates: {} };
+            }
+            
+            boardsData[currentBoardIndex].img = canvas.toDataURL();
+            boardsData[currentBoardIndex].html = textOverlay.innerHTML; 
+
+            // SIMPAN KE LOCALSTORAGE SECARA OTOMATIS
+            localStorage.setItem('chalkboard_backup', JSON.stringify(boardsData));
         }
 
         function restoreBoardState(data) {
@@ -861,6 +923,19 @@
             document.getElementById('current-board-label').innerText = currentBoardIndex + 1;
             document.getElementById('btn-prev').disabled = currentBoardIndex === 0;
             document.getElementById('btn-next').disabled = currentBoardIndex === MAX_BOARDS - 1;
+
+            // --- Logika untuk menyembunyikan/menampilkan kontrol PDF ---
+            const pdfControls = document.getElementById('pdf-controls');
+            if (pdfControls) {
+                // Hanya tampilkan jika kita berada di board tempat PDF di-upload
+                if (currentBoardIndex === pdfBoardIndex && currentPdfDoc !== null) {
+                    pdfControls.classList.remove('hidden');
+                    pdfControls.classList.add('flex');
+                } else {
+                    pdfControls.classList.remove('flex');
+                    pdfControls.classList.add('hidden');
+                }
+            }
         }
 
         function nextBoard() {
@@ -881,12 +956,210 @@
             }
         }
 
-        function clearBoard() {
+        function clearBoard(skipConfirm = false) {
+            // Jika skipConfirm bernilai false (tombol tong sampah ditekan), munculkan popup
+            if (!skipConfirm) {
+                const isConfirm = confirm("Apakah Anda ingin mem-backup data ke JSON sebelum membersihkan papan?");
+                if (isConfirm) {
+                    exportData();
+                }
+            }
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             textOverlay.innerHTML = '';
-            saveBoardState();
+            saveBoardState(); // Otomatis menyimpan state kosong ke localStorage
             activeTextElement = null;
             updateFontButtonsState();
+        }
+
+        // ==========================================
+        // FITUR BACKUP (EXPORT) & RESTORE (IMPORT)
+        // ==========================================
+        function exportData() {
+            saveBoardState(); // Pastikan state terbaru tersimpan
+            const dataStr = JSON.stringify(boardsData);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+            
+            // Generate format tanggal-bulan-tahun (DD-MM-YYYY)
+            const today = new Date();
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Bulan dimulai dari 0
+            const yyyy = today.getFullYear();
+            
+            const exportFileDefaultName = `${dd}-${mm}-${yyyy}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    if (Array.isArray(importedData)) {
+                        for (let i = 0; i < MAX_BOARDS; i++) {
+                            boardsData[i] = importedData[i] || { img: null, html: '' };
+                        }
+                        // Update localstorage & papan saat ini
+                        localStorage.setItem('chalkboard_backup', JSON.stringify(boardsData));
+                        restoreBoardState(boardsData[currentBoardIndex]);
+                        alert("Data JSON berhasil dipulihkan!");
+                    } else {
+                        alert("Format JSON tidak valid.");
+                    }
+                } catch (error) {
+                    alert("Gagal membaca file JSON.");
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset input file
+        }
+
+        // ==========================================
+        // FITUR UPLOAD & PDF VIEWER
+        // ==========================================
+        let currentPdfDoc = null;
+        let currentPdfPage = 1;
+        let pdfBoardIndex = -1;
+        let currentPdfName = '';
+
+        async function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.type === 'application/pdf') {
+                const fileReader = new FileReader();
+                fileReader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    currentPdfDoc = await pdfjsLib.getDocument(typedarray).promise;
+                    currentPdfPage = 1;
+                    
+                    // Simpan nama file PDF-nya
+                    currentPdfName = file.name; 
+                    
+                    // Simpan indeks board tempat PDF ini di-upload
+                    pdfBoardIndex = currentBoardIndex; 
+                    
+                    // Tampilkan kontrol PDF
+                    document.getElementById('pdf-controls').classList.remove('hidden');
+                    document.getElementById('pdf-controls').classList.add('flex');
+                    
+                    renderPdfPage(currentPdfPage);
+                };
+                fileReader.readAsArrayBuffer(file);
+            }
+            else if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const scale = Math.min((canvas.width * 0.9) / img.width, (canvas.height * 0.9) / img.height); 
+                        const w = img.width * scale;
+                        const h = img.height * scale;
+                        const x = (canvas.width - w) / 2;
+                        const y = (canvas.height - h) / 2;
+                        ctx.drawImage(img, x, y, w, h);
+                        saveBoardState();
+                    }
+                    img.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            } 
+            else {
+                alert("Format file tidak didukung. Harap upload gambar (JPG/PNG) atau PDF.");
+            }
+            e.target.value = ''; // Reset
+        }
+
+        async function renderPdfPage(num) {
+            if (!currentPdfDoc) return;
+            
+            // 1. Cek apakah halaman PDF ini sudah pernah dicoret/disimpan di localStorage BERDASARKAN NAMA FILE
+            let savedState = null;
+            if (boardsData[pdfBoardIndex].pdfStates[currentPdfName]) {
+                savedState = boardsData[pdfBoardIndex].pdfStates[currentPdfName][num];
+            }
+            
+            if (savedState && savedState.img) {
+                // JIKA ADA: Kembalikan coretan dan gambar PDF dari penyimpanan tanpa overwrite
+                restoreBoardState(savedState);
+            } else {
+                // Bersihkan layar sementara HANYA jika ini halaman yang belum pernah dibuka
+                clearBoard(true); 
+
+                // JIKA BELUM ADA CORETAN: Render murni dari file PDF
+                const page = await currentPdfDoc.getPage(num);
+                
+                const viewport = page.getViewport({ scale: 1 });
+                const scale = Math.min((canvas.width * 0.9) / viewport.width, (canvas.height * 0.9) / viewport.height);
+                const scaledViewport = page.getViewport({ scale: scale });
+
+                const offscreenCanvas = document.createElement('canvas');
+                const offscreenCtx = offscreenCanvas.getContext('2d');
+                offscreenCanvas.width = scaledViewport.width;
+                offscreenCanvas.height = scaledViewport.height;
+
+                const renderContext = {
+                    canvasContext: offscreenCtx,
+                    viewport: scaledViewport
+                };
+                
+                await page.render(renderContext).promise;
+                
+                const x = (canvas.width - scaledViewport.width) / 2;
+                const y = (canvas.height - scaledViewport.height) / 2;
+                ctx.drawImage(offscreenCanvas, x, y);
+                
+                // Simpan kondisi papan aktif saat render baru selesai
+                saveBoardState();
+            }
+            
+            // Update UI teks halaman
+            document.getElementById('pdf-page-num').textContent = `${num} / ${currentPdfDoc.numPages}`;
+        }
+
+        // Fungsi untuk menyimpan coretan halaman PDF secara spesifik
+        function savePdfPageState() {
+            if (pdfBoardIndex !== -1 && currentPdfDoc !== null && currentPdfName !== '') {
+                // Pastikan teks terbaru masuk ke element
+                document.querySelectorAll('#text-overlay textarea').forEach(ta => {
+                    ta.textContent = ta.value;
+                });
+                
+                // Buat ruang penyimpanan (object) untuk PDF ini jika belum pernah dibuat
+                if (!boardsData[pdfBoardIndex].pdfStates[currentPdfName]) {
+                    boardsData[pdfBoardIndex].pdfStates[currentPdfName] = {};
+                }
+                
+                // Simpan canvas (PDF + Coretan) dan teks HTML ke state halaman PDF ini
+                boardsData[pdfBoardIndex].pdfStates[currentPdfName][currentPdfPage] = {
+                    img: canvas.toDataURL(),
+                    html: textOverlay.innerHTML
+                };
+                
+                // Simpan permanen ke localStorage
+                localStorage.setItem('chalkboard_backup', JSON.stringify(boardsData));
+            }
+        }
+
+        function prevPdfPage() {
+            if (currentPdfPage <= 1) return;
+            savePdfPageState(); // Simpan coretan di halaman ini sebelum pindah
+            currentPdfPage--;
+            renderPdfPage(currentPdfPage);
+        }
+
+        function nextPdfPage() {
+            if (currentPdfPage >= currentPdfDoc.numPages) return;
+            savePdfPageState(); // Simpan coretan di halaman ini sebelum pindah
+            currentPdfPage++;
+            renderPdfPage(currentPdfPage);
         }
 
         // Shortcuts Keyboard
@@ -905,10 +1178,31 @@
 
         // INIT
         window.onload = () => {
+            const savedData = localStorage.getItem('chalkboard_backup');
+            if (savedData) {
+                try {
+                    const parsedData = JSON.parse(savedData);
+                    for (let i = 0; i < MAX_BOARDS; i++) {
+                        boardsData[i] = parsedData[i] || { img: null, html: '', pdfStates: {} };
+                        // Pastikan properti pdfStates selalu ada agar tidak error
+                        if (!boardsData[i].pdfStates) {
+                            boardsData[i].pdfStates = {};
+                        }
+                    }
+                } catch (e) {
+                    console.error("Gagal memuat data dari localStorage", e);
+                }
+            }
+
             applyCanvasSize();
             setTool('pen');
             updateBoardUI();
+            
+            restoreBoardState(boardsData[currentBoardIndex]);
+            
+            if(window.lucide) lucide.createIcons();
         };
+        
     </script>
 </body>
 </html>
