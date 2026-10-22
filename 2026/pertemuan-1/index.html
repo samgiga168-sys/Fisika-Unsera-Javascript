@@ -65,6 +65,12 @@
             overflow: hidden;
             touch-action: none;
         }
+
+        /* mematikan klik 2 kali pada browser IOS */
+        html, body {
+            touch-action: none !important;
+            -webkit-text-size-adjust: none; /* Mencegah iOS memperbesar font otomatis */
+        }
         
         .board-light { background-color: #ffffff; }
         .dark .board-dark { background-color: #1e402d; }
@@ -408,6 +414,31 @@
 
     <!-- SCRIPT BLOKIR ZOOM -->
     <script>
+        // 3 & 5. Blokir Pinch-to-Zoom dan Double-Tap pada iOS
+        let lastTouchTime = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            // Blokir cubitan (pinch-to-zoom)
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+            
+            // Blokir double-tap to zoom
+            const now = new Date().getTime();
+            if (now - lastTouchTime <= 300) {
+                e.preventDefault();
+            }
+            lastTouchTime = now;
+        }, { passive: false });
+
+        document.addEventListener('touchend', function (e) {
+            const now = new Date().getTime();
+            if (now - lastTouchTime <= 300) {
+                e.preventDefault();
+            }
+            lastTouchTime = now;
+        }, { passive: false });
+        
         // 1. Blokir zoom dari Keyboard (Ctrl/Cmd + Plus/Minus/Nol)
         window.addEventListener('keydown', function (e) {
             if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
