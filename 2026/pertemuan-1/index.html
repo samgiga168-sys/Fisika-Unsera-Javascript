@@ -2,7 +2,7 @@
 <html lang="id" class="antialiased">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="Papan Tulis Interaktif - Fisika UNSERA">
     <title>Chalkboard Workspace - Fisika UNSERA</title>
 
@@ -348,6 +348,52 @@
         });
 
         updateActiveThemeButton();
+    </script>
+
+    <!-- SCRIPT BLOKIR ZOOM -->
+    <script>
+        // 1. Blokir zoom dari Keyboard (Ctrl/Cmd + Plus/Minus/Nol)
+        window.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 2. Blokir zoom dari Mouse Wheel atau Trackpad (Ctrl/Cmd + Scroll)
+        window.addEventListener('wheel', function (e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 3. Blokir Pinch-to-Zoom (Cubit) di Mobile/Tablet
+        document.addEventListener('touchmove', function (e) {
+            // Mencegah zoom jika ada lebih dari 1 jari (cubitan)
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 4. Blokir Gesture khusus Safari (Mac/iOS) yang sering mengabaikan meta tag
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gesturechange', function (e) {
+            e.preventDefault();
+        });
+        document.addEventListener('gestureend', function (e) {
+            e.preventDefault();
+        });
+        
+        // 5. Blokir double-tap to zoom pada iOS Safari
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (e) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
     </script>
 
     <!-- LOGIKA PAPAN TULIS & TEKS HTML OVERLAY -->
