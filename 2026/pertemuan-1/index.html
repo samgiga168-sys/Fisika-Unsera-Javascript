@@ -2,7 +2,7 @@
 <html lang="id" class="antialiased">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Papan Tulis Interaktif - Fisika UNSERA">
     <title>Chalkboard Workspace - Fisika UNSERA</title>
 
@@ -55,16 +55,15 @@
         .board-canvas-wrapper {
             position: relative;
             width: 100%;
-            height: 100%;
             touch-action: none;
         }
         
-        /* Tema Light: Whiteboard Bersih (Tanpa Titik) */
+        /* Tema Light: Whiteboard Bersih */
         .board-light {
             background-color: #ffffff;
         }
 
-        /* Tema Dark: Chalkboard MIT Style (Tanpa Titik) */
+        /* Tema Dark: Chalkboard */
         .dark .board-dark {
             background-color: #1e402d; 
         }
@@ -78,7 +77,7 @@
         
         /* Animasi Transisi Toolbar & Scroll pada Mobile */
         .toolbar-expanded {
-            max-width: 90vw !important; /* Adaptif untuk Mobile */
+            max-width: 95vw !important; /* Adaptif untuk Mobile */
             opacity: 1 !important;
             padding-left: 0.5rem;
             padding-right: 0.5rem;
@@ -116,7 +115,7 @@
             line-height: 1.2;
         }
         .canvas-text-input:focus {
-            border-color: #3b82f6; /* Warna fokus biru */
+            border-color: #3b82f6; 
         }
         
         /* Custom styling range slider */
@@ -151,7 +150,8 @@
     </script>
 </head>
 
-<body class="h-screen w-screen flex flex-col bg-[hsl(var(--background))] text-[hsl(var(--foreground))] transition-colors duration-300 overflow-hidden">
+<!-- MENGGUNAKAN h-[100dvh] (Dynamic Viewport Height) agar tidak tertutup address bar hp saat landscape/portrait -->
+<body class="h-[100dvh] w-screen flex flex-col bg-[hsl(var(--background))] text-[hsl(var(--foreground))] transition-colors duration-300 overflow-hidden">
 
     <!-- HEADER: Navigasi Board -->
     <header class="h-16 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 sm:px-6 bg-[hsl(var(--background))] z-10 shadow-sm shrink-0">
@@ -182,12 +182,15 @@
         </div>
     </header>
 
-    <!-- MAIN WORKSPACE: Adaptif di semua device -->
-    <!-- py-4 sm:py-8 menciptakan ruang kosong di atas dan bawah. flex-1 membuat elemen mengambil seluruh sisa tinggi layar -->
-    <main class="flex-1 w-full relative overflow-hidden flex flex-col py-6 sm:py-8 md:py-10 bg-[hsl(var(--muted))]">
+    <!-- MAIN WORKSPACE: Mengisi layar penuh secara dinamis namun tetap memberi ruang di atas & bawah -->
+    <main class="flex-1 w-full relative overflow-hidden flex flex-col pt-4 pb-[5.5rem] sm:pt-6 sm:pb-24 bg-[hsl(var(--muted))]">
         
-        <!-- PAPAN TULIS: flex-1 membuatnya menyesuaikan diri mengikuti parent, w-full membuatnya rata sisi kiri & kanan -->
-        <div class="board-canvas-wrapper board-light board-dark border-y-[10px] sm:border-y-[14px] md:border-y-[18px] border-x-0 border-chalk-border shadow-2xl w-full flex-1" id="canvas-container">
+        <!-- PAPAN TULIS: 
+             - w-full memastikan rata sisi kiri & kanan (100%)
+             - flex-1 memastikan tinggi layar otomatis terisi secara dinamis (mengikuti batas pt & pb main di atas)
+             - border-y memberikan efek pinggiran kayu di atas & bawah saja 
+        -->
+        <div class="board-canvas-wrapper board-light board-dark border-y-[10px] sm:border-y-[14px] md:border-y-[16px] border-x-0 border-chalk-border shadow-2xl flex-1 w-full" id="canvas-container">
             <canvas id="chalkboard"></canvas>
         </div>
         
@@ -245,14 +248,12 @@
                 <i data-lucide="moon" class="h-4 w-4"></i>
             </button>
         </div>
-
     </div>
 
     <!-- LOGIKA TEMA & RENDER ICON -->
     <script>
         lucide.createIcons();
 
-        // Logika Toggle Toolbar Bawah
         let isToolbarOpen = false;
         function toggleToolbar() {
             isToolbarOpen = !isToolbarOpen;
@@ -317,7 +318,7 @@
     <!-- LOGIKA PAPAN TULIS (CANVAS) -->
     <script>
         const canvas = document.getElementById('chalkboard');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const container = document.getElementById('canvas-container');
 
         // State Aplikasi
@@ -333,13 +334,24 @@
         // Elemen input teks aktif
         let activeTextInput = null;
 
-        // Setup Canvas Size (Otomatis Menyesuaikan Screen & Parent saat Resize)
+        // Setup Canvas Size Responsif (Tertrigger saat orientasi/resize device berubah)
         function resizeCanvas() {
-            const tempImg = boardsData[currentBoardIndex];
+            // Ambil coretan saat ini langsung dari canvas, bukan dari array, 
+            // sehingga orientasi (portrait <-> landscape) tidak menghapus progres.
+            const currentImgData = canvas.toDataURL(); 
+            
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
             updateCanvasContextProps();
-            if (tempImg) restoreBoardState(tempImg);
+            
+            if (currentImgData !== "data:,") {
+                const img = new Image();
+                img.src = currentImgData;
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                    saveBoardState(); // update data array
+                };
+            }
         }
 
         window.addEventListener('resize', resizeCanvas);
@@ -363,7 +375,7 @@
 
         // TOOL UI UPDATE
         function setTool(tool) {
-            // Jika ada input teks aktif, paksa selesai (blur/render ke canvas)
+            // Jika ada input teks aktif, paksa selesai
             if (activeTextInput) {
                 activeTextInput.blur();
             }
@@ -382,7 +394,7 @@
                 activeBtn.classList.add('bg-[hsl(var(--muted))]', 'text-[hsl(var(--foreground))]');
             }
         }
-        setTool('pen'); // Default
+        setTool('pen'); 
 
         // MOUSE / TOUCH EVENTS
         const getMousePos = (e) => {
@@ -398,23 +410,20 @@
         const startDraw = (e) => {
             const pos = getMousePos(e);
             
-            // Logika untuk Tool Teks (Textarea Multiline & Resizable)
+            // Logika untuk Tool Teks 
             if (currentTool === 'text') {
                 if (activeTextInput) return; 
                 
                 const input = document.createElement('textarea');
                 input.className = 'canvas-text-input';
                 
-                // Ambil ukuran font dari slider, batas responsif berdasarkan layar
                 const toolSize = parseInt(document.getElementById('tool-size').value);
                 const fontSize = Math.max(16, toolSize * 4); 
                 input.style.fontSize = fontSize + 'px';
                 
-                // Posisikan textarea
                 input.style.left = pos.x + 'px';
                 input.style.top = pos.y + 'px'; 
                 
-                // Tema Teks
                 const isDark = document.documentElement.classList.contains('dark');
                 input.style.color = isDark ? '#f8fafc' : '#0f172a';
                 
@@ -431,7 +440,6 @@
                         ctx.fillStyle = input.style.color;
                         ctx.textBaseline = 'top';
                         
-                        // Render Multiline
                         const lines = text.split('\n');
                         const lineHeight = fontSize * 1.2;
                         lines.forEach((line, index) => {
@@ -444,7 +452,6 @@
                     activeTextInput = null;
                 };
 
-                // Blur events untuk menge-print Teks
                 input.addEventListener('blur', finalizeText);
                 input.addEventListener('keydown', (ev) => {
                     if (ev.key === 'Enter' && !ev.shiftKey) {
