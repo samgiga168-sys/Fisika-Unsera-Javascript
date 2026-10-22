@@ -55,6 +55,9 @@
         .board-canvas-wrapper {
             position: relative;
             width: 100%;
+            /* Penting: height 100% dan overflow tersembunyi agar canvas tidak melebar sendiri */
+            height: 100%;
+            overflow: hidden;
             touch-action: none;
         }
         
@@ -68,7 +71,11 @@
             background-color: #1e402d; 
         }
 
+        /* CANVAS DIBUAT ABSOLUTE AGAR BISA SHRINK/GROW TANPA MERUSAK FLEXBOX PARENT */
         canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
             display: block;
             width: 100%;
             height: 100%;
@@ -110,7 +117,7 @@
             z-index: 100;
             min-width: 120px;
             min-height: 40px;
-            resize: both; /* Memberikan kursor drag untuk melebarkan di pojok kanan bawah */
+            resize: both; 
             overflow: auto;
             line-height: 1.2;
         }
@@ -150,7 +157,6 @@
     </script>
 </head>
 
-<!-- MENGGUNAKAN h-[100dvh] (Dynamic Viewport Height) agar tidak tertutup address bar hp saat landscape/portrait -->
 <body class="h-[100dvh] w-screen flex flex-col bg-[hsl(var(--background))] text-[hsl(var(--foreground))] transition-colors duration-300 overflow-hidden">
 
     <!-- HEADER: Navigasi Board -->
@@ -182,14 +188,10 @@
         </div>
     </header>
 
-    <!-- MAIN WORKSPACE: Mengisi layar penuh secara dinamis namun tetap memberi ruang di atas & bawah -->
+    <!-- MAIN WORKSPACE: Adaptif di semua device dengan jarak pt & pb -->
     <main class="flex-1 w-full relative overflow-hidden flex flex-col pt-4 pb-[5.5rem] sm:pt-6 sm:pb-24 bg-[hsl(var(--muted))]">
         
-        <!-- PAPAN TULIS: 
-             - w-full memastikan rata sisi kiri & kanan (100%)
-             - flex-1 memastikan tinggi layar otomatis terisi secara dinamis (mengikuti batas pt & pb main di atas)
-             - border-y memberikan efek pinggiran kayu di atas & bawah saja 
-        -->
+        <!-- PAPAN TULIS CONTAINER -->
         <div class="board-canvas-wrapper board-light board-dark border-y-[10px] sm:border-y-[14px] md:border-y-[16px] border-x-0 border-chalk-border shadow-2xl flex-1 w-full" id="canvas-container">
             <canvas id="chalkboard"></canvas>
         </div>
@@ -199,16 +201,14 @@
     <!-- FLOATING TOOLBAR: Bawah Tengah -->
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300 max-w-[95vw]">
         
-        <!-- Toggle Menu Button (Titik Satu) -->
         <button onclick="toggleToolbar()" id="btn-toggle-toolbar" class="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-transform active:scale-95 z-20 shrink-0 shadow-sm">
             <i data-lucide="more-horizontal" id="icon-menu" class="w-6 h-6 absolute transition-all duration-300"></i>
             <i data-lucide="x" id="icon-close" class="w-6 h-6 absolute opacity-0 scale-50 transition-all duration-300"></i>
         </button>
 
-        <!-- Hidden Expandable Area (Tools, Size & Themes) -->
+        <!-- Expandable Area (Scrollable horizontal on mobile) -->
         <div id="expandable-tools" class="flex items-center max-w-0 opacity-0 px-0 overflow-x-auto hide-scrollbar transition-all duration-500 ease-in-out gap-1 z-10 shrink-0 scroll-smooth">
             
-            <!-- Drawing Tools -->
             <button onclick="setTool('pen')" id="tool-pen" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Pulpen (P)">
                 <i data-lucide="pen" class="w-5 h-5"></i>
             </button>
@@ -225,19 +225,15 @@
                 <i data-lucide="eraser" class="w-5 h-5"></i>
             </button>
 
-            <!-- Divider -->
             <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-1 sm:mx-2 shrink-0"></div>
 
-            <!-- Size / Thickness Slider -->
             <div class="flex items-center gap-2 px-2 shrink-0" title="Ketebalan / Ukuran Font">
                 <i data-lucide="scaling" class="w-4 h-4 text-[hsl(var(--muted-foreground))]"></i>
                 <input type="range" id="tool-size" min="1" max="50" value="4" class="w-16 sm:w-28" oninput="updateCanvasContextProps()">
             </div>
 
-            <!-- Divider -->
             <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-1 sm:mx-2 shrink-0"></div>
 
-            <!-- Theme Toggles -->
             <button onclick="setTheme('light')" id="btn-light" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Light Mode">
                 <i data-lucide="sun" class="h-4 w-4"></i>
             </button>
@@ -321,7 +317,6 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const container = document.getElementById('canvas-container');
 
-        // State Aplikasi
         const MAX_BOARDS = 30;
         let currentBoardIndex = 0;
         const boardsData = new Array(MAX_BOARDS).fill(null); 
@@ -331,30 +326,47 @@
         let startX, startY;
         let snapshot; 
         
-        // Elemen input teks aktif
         let activeTextInput = null;
 
-        // Setup Canvas Size Responsif (Tertrigger saat orientasi/resize device berubah)
-        function resizeCanvas() {
-            // Ambil coretan saat ini langsung dari canvas, bukan dari array, 
-            // sehingga orientasi (portrait <-> landscape) tidak menghapus progres.
-            const currentImgData = canvas.toDataURL(); 
+        // Fungsi Inti untuk Menyesuaikan Resolusi Canvas
+        function applyCanvasSize() {
+            // Cek apakah ukuran benar-benar berubah untuk menghemat performa
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight;
             
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            if (canvas.width === newWidth && canvas.height === newHeight) return;
+
+            // Simpan gambar sebelum canvas direset
+            const currentImgData = canvas.toDataURL(); 
+
+            // Sesuaikan ukuran asli piksel canvas
+            canvas.width = newWidth;
+            canvas.height = newHeight;
             updateCanvasContextProps();
             
+            // Gambar kembali coretan yang sudah ada
             if (currentImgData !== "data:,") {
                 const img = new Image();
                 img.src = currentImgData;
                 img.onload = () => {
                     ctx.drawImage(img, 0, 0);
-                    saveBoardState(); // update data array
+                    saveBoardState(); 
                 };
             }
         }
 
-        window.addEventListener('resize', resizeCanvas);
+        // DEBOUNCE RESIZE: Memastikan resize diproses setelah browser selesai me-layout ulang (sangat penting untuk mobile landscape/portrait)
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(applyCanvasSize, 150);
+        });
+
+        // Tangkap event saat HP diputar
+        window.addEventListener('orientationchange', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(applyCanvasSize, 250); // Jeda sedikit lebih lama agar address bar selesai bergeser
+        });
 
         function updateCanvasContextProps() {
             const isDark = document.documentElement.classList.contains('dark');
@@ -375,10 +387,7 @@
 
         // TOOL UI UPDATE
         function setTool(tool) {
-            // Jika ada input teks aktif, paksa selesai
-            if (activeTextInput) {
-                activeTextInput.blur();
-            }
+            if (activeTextInput) activeTextInput.blur();
             
             currentTool = tool;
             updateCanvasContextProps();
@@ -445,7 +454,6 @@
                         lines.forEach((line, index) => {
                             ctx.fillText(line, pos.x + 4, pos.y + 4 + (index * lineHeight));
                         });
-                        
                         saveBoardState();
                     }
                     input.remove();
@@ -506,7 +514,6 @@
         canvas.addEventListener('mouseup', stopDraw);
         canvas.addEventListener('mouseout', stopDraw);
 
-        // Native support touch (Tablet & Mobile)
         canvas.addEventListener('touchstart', startDraw, { passive: false });
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', stopDraw);
@@ -554,10 +561,8 @@
             saveBoardState();
         }
 
-        // Shortcuts Keyboard Update
         window.addEventListener('keydown', (e) => {
             if (activeTextInput && document.activeElement === activeTextInput) return;
-            
             if (e.key.toLowerCase() === 'p') setTool('pen');
             if (e.key.toLowerCase() === 't') setTool('text');
             if (e.key.toLowerCase() === 'r') setTool('rect');
@@ -569,7 +574,7 @@
 
         // INIT
         window.onload = () => {
-            resizeCanvas();
+            applyCanvasSize();
             updateBoardUI();
         };
     </script>
