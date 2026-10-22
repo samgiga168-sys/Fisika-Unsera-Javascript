@@ -31,10 +31,6 @@
         }
     </script>
 
-    <!-- Alpine.js (Untuk Dropdown Interaktif) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -68,12 +64,6 @@
             height: 100%;
             overflow: hidden;
             touch-action: none;
-        }
-
-        /* mematikan klik 2 kali pada browser IOS */
-        html, body {
-            touch-action: none !important;
-            -webkit-text-size-adjust: none; /* Mencegah iOS memperbesar font otomatis */
         }
         
         .board-light { background-color: #ffffff; }
@@ -165,11 +155,11 @@
 
         /* Styling Toolbar */
         .toolbar-expanded {
-            width: max-content !important; 
-            max-width: calc(100vw - 4.5rem) !important;
-            max-height: 300px !important; 
+            /* Kurangi lebar maksimal untuk memberi ruang bagi tombol toggle (sekitar 4rem / 64px) */
+            max-width: calc(95vw - 4rem) !important; 
             opacity: 1 !important;
-            padding: 0.5rem !important; 
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
             margin-left: 0.5rem;
         }
         @media (min-width: 640px) {
@@ -193,35 +183,35 @@
 <body class="h-[100dvh] w-screen flex flex-col bg-[hsl(var(--background))] text-[hsl(var(--foreground))] transition-colors duration-300 overflow-hidden">
 
     <!-- HEADER: Navigasi Board -->
-    <header class="h-16 border-b border-[hsl(var(--border))] flex items-center justify-between px-2 sm:px-6 bg-[hsl(var(--background))] z-10 shadow-sm shrink-0">
-        <div class="flex items-center gap-2">
+    <header class="h-16 border-b border-[hsl(var(--border))] flex items-center justify-between px-4 sm:px-6 bg-[hsl(var(--background))] z-10 shadow-sm shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3">
             <!-- Tombol Back ke Home -->
             <a href="/" class="w-8 h-8 rounded bg-chalk-green text-white flex items-center justify-center font-bold shrink-0 hover:opacity-80 transition-opacity" title="Kembali">
                 <i data-lucide="arrow-left" class="w-5 h-5"></i>
             </a>
         </div>
 
-        <!-- Navigasi Board Tengah -->
-        <div class="flex items-center bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-md p-1 shrink-0">
+        <div class="flex items-center bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-md p-1">
             <button onclick="prevBoard()" class="inline-flex items-center justify-center h-8 w-8 rounded-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] hover:shadow-sm transition-all disabled:opacity-50" id="btn-prev">
                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
             </button>
-            <div class="px-2 sm:px-4 text-xs sm:text-sm font-medium tabular-nums flex items-center justify-center min-w-[65px] sm:min-w-[90px] whitespace-nowrap">
-                <span class="hidden sm:inline mr-1">Board</span><span id="current-board-label" class="mx-0.5">1</span> / 30
+            <div class="px-2 sm:px-4 text-sm font-medium tabular-nums flex items-center justify-center min-w-[80px] sm:min-w-[90px]">
+                Board <span id="current-board-label" class="ml-1 mr-1">1</span> / 30
             </div>
             <button onclick="nextBoard()" class="inline-flex items-center justify-center h-8 w-8 rounded-sm text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] hover:shadow-sm transition-all disabled:opacity-50" id="btn-next">
                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
             </button>
         </div>
         
-        <div class="flex justify-end items-center gap-1.5 sm:gap-2">
+        <div class="flex justify-end items-center gap-2">
+
             <!-- Input File & Tombol Upload -->
             <input type="file" id="upload-file" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload(event)">
-            <button onclick="document.getElementById('upload-file').click()" class="inline-flex items-center justify-center h-9 px-2.5 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-[hsl(var(--muted))] transition-colors" title="Upload PDF">
+            <button onclick="document.getElementById('upload-file').click()" class="inline-flex items-center justify-center h-9 px-3 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-[hsl(var(--muted))] transition-colors">
                 <i data-lucide="upload" class="w-4 h-4 sm:mr-2"></i> <span class="hidden sm:inline">Upload PDF</span>
             </button>
 
-            <button onclick="clearBoard()" class="inline-flex items-center justify-center h-9 px-2.5 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors" title="Bersihkan">
+            <button onclick="clearBoard()" class="inline-flex items-center justify-center h-9 px-3 sm:px-4 rounded-md text-sm font-medium border border-[hsl(var(--border))] bg-transparent hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors">
                 <i data-lucide="trash-2" class="w-4 h-4 sm:mr-2"></i> <span class="hidden sm:inline">Bersihkan</span>
             </button>
         </div>
@@ -263,91 +253,73 @@
     </main>
 
     <!-- FLOATING TOOLBAR -->
-    <!-- Tambahkan p-1.5 dan items-start sm:items-center agar letak tombol X selalu rapi -->
-    <div x-data="{ open: false }" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-start sm:items-center p-1.5 rounded-[1.5rem] sm:rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300 max-w-[95vw] w-max">
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300 max-w-[95vw]">
         
-        <!-- Tombol Toggle Utama -->
-        <button @click="open = !open; $dispatch('toolbar-toggled', open)" class="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-transform active:scale-95 z-20 shrink-0 shadow-sm">
-            <i data-lucide="more-horizontal" class="w-6 h-6 absolute transition-all duration-300" :class="open ? 'opacity-0 scale-50 rotate-90' : 'opacity-100 scale-100 rotate-0'"></i>
-            <i data-lucide="x" class="w-6 h-6 absolute transition-all duration-300" :class="open ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 -rotate-90'"></i>
+        <button onclick="toggleToolbar()" id="btn-toggle-toolbar" class="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-transform active:scale-95 z-20 shrink-0 shadow-sm">
+            <i data-lucide="more-horizontal" id="icon-menu" class="w-6 h-6 absolute transition-all duration-300"></i>
+            <i data-lucide="x" id="icon-close" class="w-6 h-6 absolute opacity-0 scale-50 transition-all duration-300"></i>
         </button>
 
-        <!-- Wrapper Alpine x-collapse -->
-        <div x-show="open" x-collapse.duration.400ms style="display: none;">
+        <div id="expandable-tools" class="flex items-center max-w-0 opacity-0 px-0 overflow-x-auto hide-scrollbar transition-all duration-500 ease-in-out gap-1 z-10 shrink-0 scroll-smooth">
             
-            <!-- Inner div: Menggunakan calc() untuk max-w agar 100% responsif mengikuti lebar layar HP -->
-            <div class="flex flex-wrap items-center justify-start overflow-hidden transition-all duration-400 ease-in-out gap-x-3 gap-y-2 z-10"
-                 :class="open ? 'max-w-[calc(95vw-4.5rem)] sm:max-w-[800px] opacity-100 ml-2 mr-1 py-0.5' : 'max-w-0 opacity-0 ml-0 mr-0 py-0'">
-                
-                <!-- GROUP 1: Alat Gambar (Ditambah flex-wrap dan hapus shrink-0) -->
-                <div class="flex flex-wrap items-center gap-1">
-                    <button onclick="setTool('select')" id="tool-select" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kursor / Geser Teks (V)">
-                        <i data-lucide="mouse-pointer-2" class="w-5 h-5"></i>
-                    </button>
-                    <button onclick="setTool('pen')" id="tool-pen" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Pulpen (P)">
-                        <i data-lucide="pen" class="w-5 h-5"></i>
-                    </button>
-                    <button onclick="setTool('text')" id="tool-text" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks Baru (T)">
-                        <i data-lucide="text-cursor-input" class="w-5 h-5"></i>
-                    </button>
-                    <button onclick="setTool('rect')" id="tool-rect" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kotak (R)">
-                        <i data-lucide="square" class="w-5 h-5"></i>
-                    </button>
-                    <button onclick="setTool('circle')" id="tool-circle" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Lingkaran (C)">
-                        <i data-lucide="circle" class="w-5 h-5"></i>
-                    </button>
-                    <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Penghapus (E)">
-                        <i data-lucide="eraser" class="w-5 h-5"></i>
-                    </button>
-                </div>
+            <button onclick="setTool('select')" id="tool-select" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kursor / Geser Teks (V)">
+                <i data-lucide="mouse-pointer-2" class="w-5 h-5"></i>
+            </button>
 
-                <!-- Divider: Hanya tampil di layar besar (sm:block) -->
-                <div class="hidden sm:block w-[1px] h-6 bg-[hsl(var(--border))] shrink-0"></div>
+            <button onclick="setTool('pen')" id="tool-pen" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Pulpen (P)">
+                <i data-lucide="pen" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('text')" id="tool-text" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks Baru (T)">
+                <i data-lucide="text-cursor-input" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('rect')" id="tool-rect" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kotak (R)">
+                <i data-lucide="square" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('circle')" id="tool-circle" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Lingkaran (C)">
+                <i data-lucide="circle" class="w-5 h-5"></i>
+            </button>
+            <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Penghapus (E)">
+                <i data-lucide="eraser" class="w-5 h-5"></i>
+            </button>
 
-                <!-- GROUP 2: Ketebalan Slider -->
-                <div class="flex flex-wrap items-center gap-2 px-1" title="Ketebalan Pulpen">
-                    <i data-lucide="scaling" class="w-4 h-4 text-[hsl(var(--muted-foreground))]"></i>
-                    <input type="range" id="tool-size" min="1" max="50" value="4" class="w-16 sm:w-20" oninput="updateCanvasContextProps()">
-                </div>
-                
-                <div class="hidden sm:block w-[1px] h-6 bg-[hsl(var(--border))] shrink-0"></div>
+            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-1 sm:mx-2 shrink-0"></div>
 
-                <!-- GROUP 3: Ukuran Font -->
-                <div class="flex flex-wrap items-center gap-1" title="Ukuran Font Teks (Aktif jika teks dipilih)">
-                    <button id="btn-font-minus" class="shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled title="Perkecil Teks">
-                        <span class="font-bold text-sm">A-</span>
-                    </button>
-                    <button id="btn-font-plus" class="shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled title="Perbesar Teks">
-                        <span class="font-bold text-lg">A+</span>
-                    </button>
-                </div>
-
-                <div class="hidden sm:block w-[1px] h-6 bg-[hsl(var(--border))] shrink-0"></div>
-
-                <!-- GROUP 4: Tema -->
-                <div class="flex flex-wrap items-center gap-1">
-                    <button onclick="setTheme('light')" id="btn-light" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Light Mode">
-                        <i data-lucide="sun" class="h-4 w-4"></i>
-                    </button>
-                    <button onclick="setTheme('system')" id="btn-system" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="System Mode">
-                        <i data-lucide="monitor" class="h-4 w-4"></i>
-                    </button>
-                    <button onclick="setTheme('dark')" id="btn-dark" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Dark Mode">
-                        <i data-lucide="moon" class="h-4 w-4"></i>
-                    </button>
-                </div>
-
+            <!-- SLIDER KETEBALAN PULPEN SAJA -->
+            <div class="flex items-center gap-2 px-2 shrink-0" title="Ketebalan Pulpen">
+                <i data-lucide="scaling" class="w-4 h-4 text-[hsl(var(--muted-foreground))]"></i>
+                <input type="range" id="tool-size" min="1" max="50" value="4" class="w-16 sm:w-20" oninput="updateCanvasContextProps()">
             </div>
+            
+            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-1 sm:mx-2 shrink-0"></div>
+
+            <!-- TOMBOL UKURAN FONT -->
+            <div class="flex items-center gap-1 shrink-0" title="Ukuran Font Teks (Aktif jika teks dipilih)">
+                <button id="btn-font-minus" class="shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled title="Perkecil Teks">
+                    <span class="font-bold text-sm">A-</span>
+                </button>
+                <button id="btn-font-plus" class="shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled title="Perbesar Teks">
+                    <span class="font-bold text-lg">A+</span>
+                </button>
+            </div>
+
+            <div class="w-[1px] h-6 bg-[hsl(var(--border))] mx-1 sm:mx-2 shrink-0"></div>
+
+            <!-- TEMA -->
+            <button onclick="setTheme('light')" id="btn-light" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Light Mode">
+                <i data-lucide="sun" class="h-4 w-4"></i>
+            </button>
+            <button onclick="setTheme('system')" id="btn-system" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="System Mode">
+                <i data-lucide="monitor" class="h-4 w-4"></i>
+            </button>
+            <button onclick="setTheme('dark')" id="btn-dark" class="theme-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Dark Mode">
+                <i data-lucide="moon" class="h-4 w-4"></i>
+            </button>
         </div>
     </div>
 
     <!-- TOMBOL BACKUP & IMPORT (Kanan Bawah) -->
-    <div id="backup-container" 
-         x-data="{ hideBackup: false }"
-         @toolbar-toggled.window="hideBackup = $event.detail"
-         :class="hideBackup ? 'opacity-0 translate-y-6 pointer-events-none' : 'opacity-100 translate-y-0'"
-         class="fixed bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2 transition-all duration-300">
-        
+    <!-- Tambahkan id="backup-container" dan transition-all duration-300 -->
+    <div id="backup-container" class="fixed bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2 transition-all duration-300">
         <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
         
         <button onclick="document.getElementById('import-file').click()" class="inline-flex items-center justify-center h-12 w-12 sm:h-10 sm:w-auto sm:px-4 rounded-full bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] shadow-md hover:bg-[hsl(var(--muted))] transition-colors" title="Import File JSON">
@@ -364,6 +336,35 @@
     <!-- PENGATURAN UI TEMA DLL -->
     <script>
         lucide.createIcons();
+
+        let isToolbarOpen = false;
+        function toggleToolbar() {
+            isToolbarOpen = !isToolbarOpen;
+            const menuArea = document.getElementById('expandable-tools');
+            const iconMenu = document.getElementById('icon-menu');
+            const iconClose = document.getElementById('icon-close');
+            const backupContainer = document.getElementById('backup-container');
+            
+            if (isToolbarOpen) {
+                menuArea.classList.add('toolbar-expanded');
+                iconMenu.classList.add('opacity-0', 'scale-50');
+                iconClose.classList.remove('opacity-0', 'scale-50');
+                
+                // Sembunyikan tombol backup
+                if(backupContainer) {
+                    backupContainer.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }
+            } else {
+                menuArea.classList.remove('toolbar-expanded');
+                iconMenu.classList.remove('opacity-0', 'scale-50');
+                iconClose.classList.add('opacity-0', 'scale-50');
+                
+                // Munculkan kembali tombol backup
+                if(backupContainer) {
+                    backupContainer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                }
+            }
+        }
 
         function updateActiveThemeButton() {
             const theme = localStorage.getItem('theme') || 'system';
@@ -407,7 +408,7 @@
 
     <!-- SCRIPT BLOKIR ZOOM -->
     <script>
-// 1. Blokir zoom dari Keyboard (Ctrl/Cmd + Plus/Minus/Nol)
+        // 1. Blokir zoom dari Keyboard (Ctrl/Cmd + Plus/Minus/Nol)
         window.addEventListener('keydown', function (e) {
             if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
                 e.preventDefault();
@@ -419,32 +420,6 @@
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
             }
-        }, { passive: false });
-
-        // 3. Blokir Pinch-to-Zoom dan Double-Tap pada iOS (VERSI PERBAIKAN)
-        let lastTouchStart = 0;
-
-        document.addEventListener('touchstart', function(e) {
-            // Cek apakah yang diklik adalah tombol, input, atau tool interaktif
-            const isUIElement = e.target.closest('button, input, textarea, a, .resize-handle, .canvas-text-input');
-
-            // Blokir cubitan (pinch-to-zoom)
-            if (e.touches.length > 1) {
-                if (!isUIElement) {
-                    e.preventDefault();
-                }
-                return;
-            }
-            
-            // Blokir double-tap to zoom
-            const now = new Date().getTime();
-            if (now - lastTouchStart <= 300) {
-                // Jangan blokir jika pengguna menekan tombol (agar tombol tetap responsif)
-                if (!isUIElement) {
-                    e.preventDefault();
-                }
-            }
-            lastTouchStart = now;
         }, { passive: false });
 
         // 3. Blokir Pinch-to-Zoom (Cubit) di Mobile/Tablet
@@ -902,6 +877,50 @@
         container.addEventListener('touchmove', draw, { passive: false });
         container.addEventListener('touchend', stopDraw);
 
+        // ==========================================
+        // FUNGSI PENYIMPANAN AMAN (ANTI QUOTA EXCEEDED)
+        // ==========================================
+        function safeSaveToLocalStorage() {
+            try {
+                localStorage.setItem('chalkboard_backup', JSON.stringify(boardsData));
+            } catch (e) {
+                // Jika error karena kapasitas LocalStorage penuh
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22) {
+                    console.warn("LocalStorage penuh! Menghapus data papan yang sudah dilewati...");
+                    
+                    // 1. Kosongkan semua data papan KECUALI papan yang sedang aktif saat ini
+                    for (let i = 0; i < MAX_BOARDS; i++) {
+                        if (i !== currentBoardIndex) {
+                            boardsData[i] = { img: null, html: '', pdfStates: {} };
+                        }
+                    }
+
+                    // 2. Jika sedang membuka PDF, hapus juga coretan di halaman PDF lain (sisakan halaman aktif)
+                    if (pdfBoardIndex !== -1 && currentPdfName && boardsData[currentBoardIndex].pdfStates[currentPdfName]) {
+                        const activePdfState = boardsData[currentBoardIndex].pdfStates[currentPdfName][currentPdfPage];
+                        boardsData[currentBoardIndex].pdfStates = {}; // Hapus semua state PDF
+                        
+                        if (activePdfState) {
+                            // Kembalikan hanya state halaman yang sedang terbuka
+                            boardsData[currentBoardIndex].pdfStates[currentPdfName] = {
+                                [currentPdfPage]: activePdfState
+                            };
+                        }
+                    }
+
+                    // 3. Coba simpan kembali setelah data lama dibersihkan
+                    try {
+                        localStorage.setItem('chalkboard_backup', JSON.stringify(boardsData));
+                        console.log("Berhasil menyimpan setelah pembersihan memori.");
+                    } catch (err) {
+                        console.error("Gagal total menyimpan ke memori:", err);
+                        alert("Memori browser sangat penuh, tidak bisa menyimpan perubahan otomatis.");
+                    }
+                } else {
+                    console.error("Terjadi kesalahan LocalStorage:", e);
+                }
+            }
+        }
 
         // ==========================================
         // BOARD MANAGEMENT LOGIC 
@@ -919,8 +938,8 @@
             boardsData[currentBoardIndex].img = canvas.toDataURL();
             boardsData[currentBoardIndex].html = textOverlay.innerHTML; 
 
-            // SIMPAN KE LOCALSTORAGE SECARA OTOMATIS
-            localStorage.setItem('chalkboard_backup', JSON.stringify(boardsData));
+            // SIMPAN KE LOCALSTORAGE SECARA OTOMATIS (Gunakan fungsi aman)
+            safeSaveToLocalStorage();
         }
 
         function restoreBoardState(data) {
@@ -1123,13 +1142,8 @@
                 const page = await currentPdfDoc.getPage(num);
                 
                 const viewport = page.getViewport({ scale: 1 });
-                const baseScale = Math.min(canvas.width / viewport.width, canvas.height / viewport.height);
-
-                // 1. Ambil pixel ratio layar (standarnya 2 atau 3 untuk layar HP/Retina)
-                const dpr = window.devicePixelRatio || 2; 
-
-                // 2. Kalikan scale dengan dpr untuk merender PDF dengan resolusi sangat tinggi
-                const scaledViewport = page.getViewport({ scale: baseScale * dpr });
+                const scale = Math.min((canvas.width * 0.9) / viewport.width, (canvas.height * 0.9) / viewport.height);
+                const scaledViewport = page.getViewport({ scale: scale });
 
                 const offscreenCanvas = document.createElement('canvas');
                 const offscreenCtx = offscreenCanvas.getContext('2d');
@@ -1140,17 +1154,12 @@
                     canvasContext: offscreenCtx,
                     viewport: scaledViewport
                 };
-
+                
                 await page.render(renderContext).promise;
-                                
-                // 3. Kembalikan ukuran tampilannya ke ukuran asli dengan membaginya kembali dengan dpr
-                const drawWidth = scaledViewport.width / dpr;
-                const drawHeight = scaledViewport.height / dpr;
-                const x = (canvas.width - drawWidth) / 2;
-                const y = (canvas.height - drawHeight) / 2;
-
-                // 4. Tambahkan parameter drawWidth dan drawHeight pada drawImage
-                ctx.drawImage(offscreenCanvas, x, y, drawWidth, drawHeight);
+                
+                const x = (canvas.width - scaledViewport.width) / 2;
+                const y = (canvas.height - scaledViewport.height) / 2;
+                ctx.drawImage(offscreenCanvas, x, y);
                 
                 // Simpan kondisi papan aktif saat render baru selesai
                 saveBoardState();
@@ -1179,8 +1188,8 @@
                     html: textOverlay.innerHTML
                 };
                 
-                // Simpan permanen ke localStorage
-                localStorage.setItem('chalkboard_backup', JSON.stringify(boardsData));
+                // Simpan permanen ke localStorage (Gunakan fungsi aman)
+                safeSaveToLocalStorage();
             }
         }
 
