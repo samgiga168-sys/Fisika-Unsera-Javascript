@@ -279,7 +279,7 @@
                 <i data-lucide="pen" class="w-5 h-5"></i>
             </button>
             <button onclick="setTool('text')" id="tool-text" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Teks Baru (T)">
-                <i data-lucide="text-cursor-input" class="w-5 h-5"></i>
+                <i data-lucide="keyboard" class="w-5 h-5"></i>
             </button>
             <button onclick="setTool('rect')" id="tool-rect" class="tool-btn shrink-0 inline-flex items-center justify-center h-10 w-10 rounded-full text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors" title="Kotak (R)">
                 <i data-lucide="square" class="w-5 h-5"></i>
@@ -478,6 +478,7 @@
         let currentTool = 'pen';
         let startX, startY;
         let snapshot; 
+        let strokePoints = [];
 
         // Font & State Management
         let activeTextElement = null;
@@ -834,9 +835,13 @@
             isDrawing = true;
             startX = pos.x;
             startY = pos.y;
-            
+
+            strokePoints = [{x: startX, y: startY}]; // Reset dan simpan titik awal
+
+            // (Lanjutkan dengan kode ctx.beginPath() yang sudah ada)
             ctx.beginPath();
             ctx.moveTo(startX, startY);
+            
             snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
             e.preventDefault();
         };
@@ -855,6 +860,7 @@
                     updateTransformBox();
                 }
             } else if (currentTool === 'pen') {
+                strokePoints.push({x: pos.x, y: pos.y}); // Simpan titik untuk dianalisis
                 ctx.lineTo(pos.x, pos.y);
                 ctx.stroke();
             } else if (currentTool === 'rect' || currentTool === 'circle') {
@@ -874,8 +880,96 @@
         const stopDraw = (e) => {
             if (!isDrawing) return;
             isDrawing = false;
+            
+            // Panggil logika Shape Recognizer khusus untuk alat pena
+            if (currentTool === 'pen') {
+                recognizeAndCorrectShape(strokePoints);
+            }
+            
             saveBoardState();
         };
+
+        // FUNGSI INI SEBELUM event listener (container.addEventListener...)
+        function recognizeAndCorrectShape(points) {
+            if (points.length < 15) return; // Abaikan jika coretan terlalu pendek (hanya titik)
+
+            const start = points[0];
+            const end = points[points.length - 1];
+            
+            // Hitung jarak garis lurus dari awal ke akhir
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const startEndDist = Math.sqrt(dx * dx + dy * dy);
+
+            // Hitung panjang total coretan berliku dan Bounding Box
+            let pathLength = 0;
+            let minX = start.x, maxX = start.x, minY = start.y, maxY = start.y;
+
+            for (let i = 1; i < points.length; i++) {
+                const p1 = points[i - 1];
+                const p2 = points[i];
+                pathLength += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+                
+                if (p2.x < minX) minX = p2.x;
+                if (p2.x > maxX) maxX = p2.x;
+                if (p2.y < minY) minY = p2.y;
+                if (p2.y > maxY) maxY = p2.y;
+            }
+
+            const width = maxX - minX;
+            const height = maxY - minY;
+            const boundingBoxDiagonal = Math.sqrt(width * width + height * height);
+
+            // 1. DETEKSI GARIS LURUS (Straight Line)
+            // Jika jarak ditarik lurus hampir sama dengan total jarak coretan (akurasi > 92%)
+            if (startEndDist / pathLength > 0.92) {
+                ctx.putImageData(snapshot, 0, 0); // Hapus coretan berantakan
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+                ctx.stroke();
+                return; // Selesai perbaiki garis
+            }
+
+            // 2. DETEKSI BENTUK TERTUTUP (Lingkaran atau Kotak)
+            // Jika titik awal dan titik akhir bertemu/berdekatan
+            if (startEndDist / boundingBoxDiagonal < 0.15) {
+                const centerX = minX + width / 2;
+                const centerY = minY + height / 2;
+                
+                // Hitung standar deviasi jarak titik ke pusat
+                let avgRadius = 0;
+                points.forEach(p => {
+                    avgRadius += Math.sqrt(Math.pow(p.x - centerX, 2) + Math.pow(p.y - centerY, 2));
+                });
+                avgRadius /= points.length;
+
+                let variance = 0;
+                points.forEach(p => {
+                    const r = Math.sqrt(Math.pow(p.x - centerX, 2) + Math.pow(p.y - centerY, 2));
+                    variance += Math.pow(r - avgRadius, 2);
+                });
+                const stdDev = Math.sqrt(variance / points.length);
+
+                // A. Deteksi Lingkaran (Deviasi radius ke pusat sangat kecil/konsisten)
+                if (stdDev / avgRadius < 0.15) {
+                    ctx.putImageData(snapshot, 0, 0);
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, avgRadius, 0, 2 * Math.PI);
+                    ctx.stroke();
+                    return;
+                }
+
+                // B. Deteksi Kotak (Deviasi lebih besar karena ada sudut-sudut)
+                if (stdDev / avgRadius >= 0.15 && width > 10 && height > 10) {
+                    ctx.putImageData(snapshot, 0, 0);
+                    ctx.beginPath();
+                    ctx.rect(minX, minY, width, height);
+                    ctx.stroke();
+                    return;
+                }
+            }
+        }
 
         container.addEventListener('mousedown', startDraw);
         container.addEventListener('mousemove', draw);
