@@ -1,0 +1,9 @@
+
+Ringkasan Perbandingan
+
+
+Kebutuhan	Nama Library	Jenis Library	Kelebihan
+Pena \(\rightarrow \) Tulisan	MyScript iinkJS	Cloud-based AI	Sangat akurat, mendukung Bahasa Indonesia, matematika, dan diagram.
+Pena \(\rightarrow \) Tulisan	Tesseract.js	Offline OCR	Berjalan 100% di browser tanpa server eksternal, tetapi input harus berupa gambar.
+Coretan \(\rightarrow \) Lingkaran	$1 Recognizer	Algoritma Gestur	Sangat ringan, gratis, dan mudah mendeteksi pola bentuk (lingkaran, kotak, segitiga).
+Coretan \(\rightarrow \) Lingkaran	Fabric.js	Canvas Vector	Bagus untuk manipulasi objek setelah lingkaran sempurna berhasil dibuat.
