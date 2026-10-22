@@ -146,17 +146,17 @@
         .resize-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
         .resize-handle.w  { top: calc(50% - 6px); left: -6px; cursor: ew-resize; }
 
-
         /* Styling Toolbar */
         .toolbar-expanded {
-            max-width: 95vw !important;
+            /* Kurangi lebar maksimal untuk memberi ruang bagi tombol toggle (sekitar 4rem / 64px) */
+            max-width: calc(95vw - 4rem) !important; 
             opacity: 1 !important;
             padding-left: 0.5rem;
             padding-right: 0.5rem;
             margin-left: 0.5rem;
         }
         @media (min-width: 640px) {
-            .toolbar-expanded { max-width: 800px !important; }
+            .toolbar-expanded { max-width: 700px !important; }
         }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
