@@ -414,32 +414,7 @@
 
     <!-- SCRIPT BLOKIR ZOOM -->
     <script>
-        // 3 & 5. Blokir Pinch-to-Zoom dan Double-Tap pada iOS
-        let lastTouchTime = 0;
-
-        document.addEventListener('touchstart', function(e) {
-            // Blokir cubitan (pinch-to-zoom)
-            if (e.touches.length > 1) {
-                e.preventDefault();
-            }
-            
-            // Blokir double-tap to zoom
-            const now = new Date().getTime();
-            if (now - lastTouchTime <= 300) {
-                e.preventDefault();
-            }
-            lastTouchTime = now;
-        }, { passive: false });
-
-        document.addEventListener('touchend', function (e) {
-            const now = new Date().getTime();
-            if (now - lastTouchTime <= 300) {
-                e.preventDefault();
-            }
-            lastTouchTime = now;
-        }, { passive: false });
-        
-        // 1. Blokir zoom dari Keyboard (Ctrl/Cmd + Plus/Minus/Nol)
+// 1. Blokir zoom dari Keyboard (Ctrl/Cmd + Plus/Minus/Nol)
         window.addEventListener('keydown', function (e) {
             if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
                 e.preventDefault();
@@ -451,6 +426,32 @@
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
             }
+        }, { passive: false });
+
+        // 3. Blokir Pinch-to-Zoom dan Double-Tap pada iOS (VERSI PERBAIKAN)
+        let lastTouchStart = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            // Cek apakah yang diklik adalah tombol, input, atau tool interaktif
+            const isUIElement = e.target.closest('button, input, textarea, a, .resize-handle, .canvas-text-input');
+
+            // Blokir cubitan (pinch-to-zoom)
+            if (e.touches.length > 1) {
+                if (!isUIElement) {
+                    e.preventDefault();
+                }
+                return;
+            }
+            
+            // Blokir double-tap to zoom
+            const now = new Date().getTime();
+            if (now - lastTouchStart <= 300) {
+                // Jangan blokir jika pengguna menekan tombol (agar tombol tetap responsif)
+                if (!isUIElement) {
+                    e.preventDefault();
+                }
+            }
+            lastTouchStart = now;
         }, { passive: false });
 
         // 3. Blokir Pinch-to-Zoom (Cubit) di Mobile/Tablet
