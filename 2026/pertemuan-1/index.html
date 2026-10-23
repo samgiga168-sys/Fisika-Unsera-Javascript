@@ -55,6 +55,23 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
 
+    <!-- KONFIGURASI & LOAD MATHJAX -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['[', ']']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <!-- <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script> -->
+
+    <script type="text/javascript" id="MathJax-script" async src="../../static/js/mathjax/tex-svg.js"></script>
+
     <style>
         :root {
             --background: 0 0% 100%;
@@ -322,6 +339,41 @@
         </div>
     </main>
 
+    <!-- TOMBOL MATH NOTASI (Kiri Bawah) -->
+    <div id="math-container" class="fixed bottom-6 left-4 sm:left-6 z-40 flex items-center gap-2 transition-all duration-300">
+        <button onclick="openMathModal()" class="inline-flex items-center justify-center h-12 w-12 sm:h-10 sm:w-auto sm:px-4 rounded-full bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--foreground))] shadow-md hover:bg-[hsl(var(--muted))] transition-colors" title="Pilih Notasi Matematika">
+            <i data-lucide="sigma" class="w-5 h-5 sm:mr-2"></i> 
+            <span class="hidden sm:inline text-sm font-medium">Math</span>
+        </button>
+    </div>
+
+    <!-- MODAL NOTASI MATH (SHADCN UI STYLE) -->
+    <div id="math-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+        <div class="bg-[hsl(var(--background))] text-[hsl(var(--foreground))] border border-[hsl(var(--border))] rounded-xl shadow-lg w-[90%] max-w-md max-h-[80vh] flex flex-col overflow-hidden transform scale-95 transition-transform duration-200" id="math-modal-content">
+            
+            <div class="px-5 py-4 border-b border-[hsl(var(--border))] flex items-center justify-between bg-[hsl(var(--muted))]">
+                <h3 class="font-semibold text-lg">Notasi Matematika</h3>
+                <button onclick="closeMathModal()" class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors rounded-sm hover:bg-[hsl(var(--border))] p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- TAMBAHAN: Kolom Pencarian -->
+            <div class="p-3 border-b border-[hsl(var(--border))]">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]"></i>
+                    <input type="text" id="math-search-input" placeholder="Cari notasi (misal: pecahan, akar)..." class="w-full pl-9 pr-4 py-2 text-sm bg-[hsl(var(--background))] border border-[hsl(var(--border))] rounded-md focus:outline-none focus:ring-2 focus:ring-ring" oninput="filterMathNotations()">
+                </div>
+            </div>
+
+            <div class="p-4 overflow-y-auto hide-scrollbar flex-1">
+                <div id="math-list" class="grid grid-cols-1 gap-2">
+                    <!-- Item akan di-render menggunakan JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- FLOATING TOOLBAR -->
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl transition-all duration-300 max-w-[95vw]">
         
@@ -414,25 +466,23 @@
             const iconMenu = document.getElementById('icon-menu');
             const iconClose = document.getElementById('icon-close');
             const backupContainer = document.getElementById('backup-container');
+            const mathContainer = document.getElementById('math-container'); 
             
             if (isToolbarOpen) {
                 menuArea.classList.add('toolbar-expanded');
                 iconMenu.classList.add('opacity-0', 'scale-50');
                 iconClose.classList.remove('opacity-0', 'scale-50');
                 
-                // Sembunyikan tombol backup
-                if(backupContainer) {
-                    backupContainer.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
-                }
+                if(backupContainer) backupContainer.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+                if(mathContainer) mathContainer.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4'); 
             } else {
                 menuArea.classList.remove('toolbar-expanded');
                 iconMenu.classList.remove('opacity-0', 'scale-50');
-                iconClose.classList.add('opacity-0', 'scale-50');
+                // PERBAIKAN: Menambahkan .classList sebelum .add
+                iconClose.classList.add('opacity-0', 'scale-50'); 
                 
-                // Munculkan kembali tombol backup
-                if(backupContainer) {
-                    backupContainer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
-                }
+                if(backupContainer) backupContainer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+                if(mathContainer) mathContainer.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4'); 
             }
         }
 
@@ -1492,6 +1542,286 @@
             if (e.key === 'ArrowRight') nextBoard();
             if (e.key === 'ArrowLeft') prevBoard();
         });
+
+
+        // ==========================================
+        // FITUR MODAL MATEMATIKA & MATHJAX
+        // ==========================================
+        let mathNotations = [];
+
+        async function fetchMathNotations() {
+            try {
+                // Sesuaikan path json jika berbeda
+                const response = await fetch('notasi_math.json');
+                mathNotations = await response.json();
+                renderMathList();
+            } catch (error) {
+                console.error("Gagal memuat notasi_math.json", error);
+            }
+        }
+
+        // Modifikasi agar bisa menerima array yang sudah difilter dan merender preview MathJax
+        function renderMathList(notationsToRender = mathNotations) {
+            const listContainer = document.getElementById('math-list');
+            listContainer.innerHTML = '';
+            
+            // Tampilan jika pencarian tidak ditemukan
+            if (notationsToRender.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-sm text-[hsl(var(--muted-foreground))] py-4">Notasi tidak ditemukan.</div>';
+                return;
+            }
+
+            notationsToRender.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "flex flex-col text-left p-3 rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] active:scale-[0.98] transition-all w-full focus:outline-none focus:ring-2 focus:ring-ring";
+                
+                // Menghilangkan $$ untuk tampilan teks mentahnya saja agar lebih rapi
+                const cleanNotasi = item.notasi.replace(/\$\$/g, '');
+
+                btn.innerHTML = `
+                    <div class="w-full flex flex-row items-center justify-between gap-2">
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-sm">${item.nama}</span>
+                            <span class="text-xs text-[hsl(var(--muted-foreground))] font-mono mt-1 bg-[hsl(var(--background))] px-1 py-0.5 rounded border border-[hsl(var(--border))] inline-block w-fit">${cleanNotasi}</span>
+                        </div>
+                        <!-- Area Preview yang akan dirender oleh MathJax -->
+                        <div class="pointer-events-none shrink-0 overflow-x-auto max-w-[50%]">
+                            ${item.notasi}
+                        </div>
+                    </div>
+                `;
+                btn.onclick = () => insertMathNotation(item.notasi);
+                listContainer.appendChild(btn);
+            });
+
+            // Panggil render ulang MathJax khusus untuk elemen listContainer (Modal)
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise([listContainer]).catch((err) => console.log(err.message));
+            }
+        }
+
+        // TAMBAHAN: Fungsi filter berdasarkan input pencarian
+        function filterMathNotations() {
+            const query = document.getElementById('math-search-input').value.toLowerCase();
+            const filtered = mathNotations.filter(item => 
+                item.nama.toLowerCase().includes(query)
+            );
+            renderMathList(filtered);
+        }
+
+        // Modifikasi agar kolom search di-reset dan langsung difokuskan saat modal dibuka
+        function openMathModal() {
+            const modal = document.getElementById('math-modal');
+            const content = document.getElementById('math-modal-content');
+            const searchInput = document.getElementById('math-search-input');
+            
+            // Reset isi pencarian setiap modal dibuka
+            if (searchInput) searchInput.value = '';
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+                
+                // Auto-focus ke input pencarian
+                if (searchInput) searchInput.focus();
+            }, 10);
+            
+            // Fetch jika belum diload, atau render ulang daftar utuh
+            if (mathNotations.length === 0) {
+                fetchMathNotations();
+            } else {
+                renderMathList();
+            }
+        }
+
+        function closeMathModal() {
+            const modal = document.getElementById('math-modal');
+            const content = document.getElementById('math-modal-content');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        
+        // Notasi matematika akan disisipkan ke dalam kotak teks aktif atau membuat kotak baru jika tidak ada yang aktif
+        function insertMathNotation(notasi) {
+            const formatNotasi = notasi;
+            const cleanNotasi = formatNotasi.replace(/\$\$/g, '').trim();
+
+            // 1. JIKA ADA ELEMEN YANG SEDANG AKTIF, GABUNGKAN NOTASI KE DALAMNYA
+            if (activeTextElement) {
+                if (activeTextElement.classList.contains('math-element')) {
+                    
+                    const editArea = activeTextElement.querySelector('textarea.math-edit-area');
+                    
+                    if (editArea) {
+                        // MODE KETIK: Sisipkan notasi dengan spasi pemisah di posisi kursor
+                        const startPos = editArea.selectionStart;
+                        const endPos = editArea.selectionEnd;
+                        const textBefore = editArea.value.substring(0, startPos);
+                        const textAfter = editArea.value.substring(endPos, editArea.value.length);
+                        
+                        editArea.value = textBefore + ' ' + cleanNotasi + ' ' + textAfter;
+                        
+                        editArea.focus();
+                        editArea.selectionStart = editArea.selectionEnd = startPos + cleanNotasi.length + 2;
+                    } else {
+                        // MODE KLIK KOTAK: Ambil teks mentah, bersihkan $$ luarnya, lalu gabungkan dengan spasi
+                        let currentRaw = activeTextElement.getAttribute('data-raw') || '';
+                        let innerRaw = currentRaw.replace(/\$\$/g, '').trim();
+                        
+                        // Gabungkan dengan spasi agar tidak menempel rapat
+                        let combinedRaw = `$$ ${innerRaw} ${cleanNotasi} $$`; 
+                        
+                        activeTextElement.setAttribute('data-raw', combinedRaw);
+                        
+                        // Terjemahkan enter (\n) menjadi baris baru MathJax (\\)
+                        let renderText = combinedRaw.replace(/\n/g, ' \\\\ ');
+                        activeTextElement.innerHTML = `<div style="pointer-events: none;">${renderText}</div>`;
+                        
+                        if (window.MathJax && window.MathJax.typesetPromise) {
+                            window.MathJax.typesetPromise([activeTextElement]).then(() => {
+                                updateTransformBox();
+                            }).catch((err) => console.log(err));
+                        }
+                    }
+                } 
+                // 2. Jika yang aktif adalah KOTAK TEKS BIASA (Alat T)
+                else if (activeTextElement.tagName === 'TEXTAREA' || activeTextElement.classList.contains('canvas-text-input')) {
+                    const startPos = activeTextElement.selectionStart;
+                    const endPos = activeTextElement.selectionEnd;
+                    const textBefore = activeTextElement.value.substring(0, startPos);
+                    const textAfter = activeTextElement.value.substring(endPos, activeTextElement.value.length);
+                    
+                    activeTextElement.value = textBefore + ' ' + formatNotasi + ' ' + textAfter;
+                    activeTextElement.textContent = activeTextElement.value;
+                    
+                    activeTextElement.focus();
+                    activeTextElement.selectionStart = activeTextElement.selectionEnd = startPos + formatNotasi.length + 2;
+                }
+                
+                updateTransformBox();
+                saveBoardState();
+                closeMathModal();
+                return; 
+            }
+
+            // 3. JIKA TIDAK ADA KOTAK YANG AKTIF, BUAT KOTAK MATEMATIKA BARU
+            setTool('select');
+            const posX = (canvas.width / 2) - 50;
+            const posY = (canvas.height / 2) - 30;
+            
+            const mathNode = document.createElement('div');
+            mathNode.className = 'canvas-text-input math-element'; 
+            mathNode.setAttribute('data-raw', formatNotasi); 
+            
+            mathNode.style.fontSize = currentDefaultFontSize + 'px';
+            mathNode.style.left = posX + 'px';
+            mathNode.style.top = posY + 'px'; 
+            mathNode.style.width = 'max-content';
+            mathNode.style.height = 'max-content';
+            mathNode.style.minWidth = '40px';
+            mathNode.style.minHeight = '40px';
+            mathNode.style.display = 'flex';
+            mathNode.style.alignItems = 'center';
+            mathNode.style.justifyContent = 'center';
+            mathNode.style.cursor = 'move';
+            mathNode.style.padding = '10px';
+            mathNode.tabIndex = 0; 
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            mathNode.style.color = isDark ? '#f8fafc' : '#0f172a';
+            
+            let renderText = formatNotasi.replace(/\n/g, ' \\\\ ');
+            mathNode.innerHTML = `<div style="pointer-events: none;">${renderText}</div>`;
+
+            mathNode.addEventListener('focus', (e) => {
+                activeTextElement = e.target;
+                updateFontButtonsState();
+            });
+            
+            mathNode.addEventListener('blur', (e) => {
+                setTimeout(() => {
+                    if (document.activeElement !== mathNode && activeTextElement === mathNode && !mathNode.querySelector('textarea:focus')) {
+                        activeTextElement = null;
+                        updateFontButtonsState();
+                    }
+                }, 150);
+            });
+
+            mathNode.addEventListener('dblclick', () => {
+                enterMathEditMode(mathNode);
+            });
+
+            textOverlay.appendChild(mathNode);
+            closeMathModal();
+            
+            setTimeout(() => {
+                mathNode.focus();
+                saveBoardState();
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    window.MathJax.typesetPromise([mathNode]).then(() => updateTransformBox()).catch((err) => console.log(err.message));
+                }
+            }, 10);
+        }
+
+        function enterMathEditMode(mathNode) {
+            if (mathNode.querySelector('textarea.math-edit-area')) return;
+
+            const rawText = mathNode.getAttribute('data-raw') || '';
+            mathNode.innerHTML = ''; 
+
+            const textarea = document.createElement('textarea');
+            textarea.className = 'math-edit-area';
+            textarea.style.width = '100%';
+            textarea.style.height = '100%';
+            textarea.style.minWidth = '180px';
+            textarea.style.minHeight = '80px';
+            textarea.style.background = 'transparent';
+            textarea.style.border = '1px dashed #888';
+            textarea.style.outline = 'none';
+            textarea.style.resize = 'none';
+            textarea.style.color = 'inherit';
+            textarea.style.fontSize = 'inherit';
+            textarea.style.fontFamily = 'monospace';
+            textarea.value = rawText;
+
+            // PENTING: Mencegah tombol spasi/enter memicu event lain di luar textarea
+            textarea.addEventListener('keydown', (e) => {
+                e.stopPropagation(); // Mengizinkan tombol spasi, enter, dll. berfungsi normal di dalam textarea
+            });
+
+            textarea.addEventListener('mousedown', (e) => e.stopPropagation());
+            textarea.addEventListener('touchstart', (e) => e.stopPropagation());
+
+            textarea.addEventListener('blur', () => {
+                const newRawText = textarea.value.trim();
+                
+                if (newRawText === '') {
+                    mathNode.remove();
+                    updateTransformBox();
+                } else {
+                    mathNode.setAttribute('data-raw', newRawText);
+                    
+                    // Mengubah baris baru dari keyboard (Enter) menjadi \\ agar dibaca MathJax
+                    let renderText = newRawText.replace(/\n/g, ' \\\\ ');
+                    
+                    mathNode.innerHTML = `<div style="pointer-events: none;">${renderText}</div>`;
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        window.MathJax.typesetPromise([mathNode]).then(() => {
+                            updateTransformBox(); 
+                        });
+                    }
+                }
+                saveBoardState();
+            });
+
+            mathNode.appendChild(textarea);
+            textarea.focus();
+        }
 
         // INIT
         window.onload = () => {
