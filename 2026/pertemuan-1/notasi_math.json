@@ -1,0 +1,11 @@
+[
+  { "nama": "Pecahan (Fraksi)", "notasi": "$$\\frac{a}{b}$$" },
+  { "nama": "Akar Kuadrat", "notasi": "$$\\sqrt{x}$$" },
+  { "nama": "Akar Pangkat n", "notasi": "$$\\sqrt[n]{x}$$" },
+  { "nama": "Pangkat (Eksponen)", "notasi": "$$x^{2}$$" },
+  { "nama": "Integral Tentu", "notasi": "$$\\int_{a}^{b} x dx$$" },
+  { "nama": "Limit", "notasi": "$$\\lim_{x \\to \\infty} f(x)$$" },
+  { "nama": "Sigma (Sum)", "notasi": "$$\\sum_{i=1}^{n} i$$" },
+  { "nama": "Simbol Alpha, Beta", "notasi": "$$\\alpha, \\beta$$" },
+  { "nama": "Matriks 2x2", "notasi": "$$\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$$" }
+]
