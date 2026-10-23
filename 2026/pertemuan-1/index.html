@@ -7,7 +7,11 @@
     <title>Chalkboard Workspace - Fisika UNSERA</title>
 
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+
+    <!-- Tailwind CSS -->
+    <script src="../../static/js/tailwindcss/tailwindcss.js"></script>
+
     <script>
         tailwind.config = {
             darkMode: ['class'],
@@ -35,8 +39,14 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Alpine.js (Untuk Dropdown Interaktif) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script> -->
+
+    <!-- Alpine Plugins LOKAL (Harus dipanggil SEBELUM Alpine core) -->
+    <script defer src="../../static/js/alpine-collapse.min.js"></script>
+
+    <!-- Alpine.js CSP -->
+    <script defer src="../../static/js/alpine.min.js"></script>
 
     <!-- PDF.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
