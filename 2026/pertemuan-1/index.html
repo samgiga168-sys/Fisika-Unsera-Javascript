@@ -169,18 +169,69 @@
 
         /* Styling Toolbar */
         .toolbar-expanded {
-            /* Kurangi lebar maksimal untuk memberi ruang bagi tombol toggle (sekitar 4rem / 64px) */
             max-width: calc(95vw - 4rem) !important; 
             opacity: 1 !important;
             padding-left: 0.5rem;
-            padding-right: 0.5rem;
+            padding-right: 1.25rem !important; /* Diperbesar dari 0.5rem menjadi 1.25rem agar ada ruang lega di kanan */
             margin-left: 0.5rem;
+            padding-bottom: 4px; 
         }
+
         @media (min-width: 640px) {
-            .toolbar-expanded { max-width: 700px !important; }
+            .toolbar-expanded { 
+                max-width: min(850px, calc(95vw - 4rem)) !important; 
+            }
         }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* 1. Default (Mobile/Touchscreen): Sembunyikan scrollbar */
+        .hide-scrollbar::-webkit-scrollbar { 
+            display: none; 
+        }
+        .hide-scrollbar { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+        }
+
+        /* 2. Desktop (Mouse): Tampilkan garis scroll horizontal yang tipis & elegan */
+        @media (hover: hover) and (pointer: fine) {
+            .hide-scrollbar::-webkit-scrollbar { 
+                display: block; 
+                height: 6px; /* Ketebalan garis scroll */
+            }
+            
+            /* Default (Light Mode): Scrollbar Hitam */
+            .hide-scrollbar { 
+                -ms-overflow-style: auto; 
+                scrollbar-width: thin; /* Untuk Firefox */
+                scrollbar-color: #000000 transparent; /* Firefox: Thumb Hitam */
+            }
+            .hide-scrollbar::-webkit-scrollbar-track {
+                background: transparent;
+                border-radius: 10px;
+                margin: 0 4px; /* Memberi sedikit jarak di ujung */
+            }
+            .hide-scrollbar::-webkit-scrollbar-thumb {
+                background: #000000; /* Webkit: Thumb Hitam */
+                border-radius: 10px;
+            }
+            .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: #333333; /* Hitam sedikit memudar saat di-hover */
+            }
+
+            /* --- Konfigurasi Khusus Dark Mode --- */
+            
+            /* Firefox: Scrollbar Putih di Dark Mode */
+            .dark .hide-scrollbar {
+                scrollbar-color: #ffffff transparent;
+            }
+            
+            /* Webkit (Chrome/Safari/Edge): Scrollbar Putih di Dark Mode */
+            .dark .hide-scrollbar::-webkit-scrollbar-thumb {
+                background: #ffffff; 
+            }
+            .dark .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: #cccccc; /* Putih sedikit meredup saat di-hover */
+            }
+        }
 
         input[type=range] { -webkit-appearance: none; background: transparent; }
         input[type=range]::-webkit-slider-runnable-track {
