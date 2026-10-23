@@ -459,7 +459,56 @@
         document.addEventListener('gestureend', function (e) {
             e.preventDefault();
         });
+
+        // ==========================================
+        // SISTEM AUTO-SAVE SUPER AMAN (ANTI HILANG)
+        // ==========================================
+        // 1. Paksa simpan state tepat sebelum halaman di-reload atau tab ditutup
+        window.addEventListener('beforeunload', (e) => {
+            saveBoardState();
+        });
+
+        // 2. Paksa simpan saat pengguna pindah tab, pindah aplikasi, atau minimize browser 
+        // (Sangat penting untuk pengguna HP/Tablet)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                saveBoardState();
+            }
+        });
+
+        // 3. Auto-Save berkala setiap 3 detik tanpa mengganggu performa
+        // Berjaga-jaga jika browser crash tiba-tiba
+        setInterval(() => {
+            if (boardsData && boardsData[currentBoardIndex]) {
+                saveBoardState();
+            }
+        }, 3000);
         
+        // 4. Tangani saat kembali ke halaman menggunakan tombol Back/Forward browser (BFCache)
+        window.addEventListener('pageshow', (e) => {
+            // e.persisted bernilai true jika halaman dipulihkan dari memori cache browser
+            if (e.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                const savedData = localStorage.getItem('chalkboard_backup');
+                if (savedData) {
+                    try {
+                        const parsedData = JSON.parse(savedData);
+                        for (let i = 0; i < MAX_BOARDS; i++) {
+                            boardsData[i] = parsedData[i] || { img: null, html: '', pdfStates: {} };
+                            if (!boardsData[i].pdfStates) {
+                                boardsData[i].pdfStates = {};
+                            }
+                        }
+                        
+                        // Gambar ulang papan dan teks dari memori terakhir yang tersimpan
+                        restoreBoardState(boardsData[currentBoardIndex]);
+                        updateBoardUI();
+                    } catch (err) {
+                        console.error("Gagal merestore data saat kembali ke halaman", err);
+                    }
+                }
+            }
+        });
+
         // 5. Blokir double-tap to zoom pada iOS Safari
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function (e) {
@@ -899,19 +948,64 @@
             saveBoardState();
         };
 
-        // FUNGSI INI SEBELUM event listener (container.addEventListener...)
+        // ==========================================
+        // HELPER: Algoritma Ramer-Douglas-Peucker (RDP)
+        // ==========================================
+        function perpendicularDistance(point, lineStart, lineEnd) {
+            const dx = lineEnd.x - lineStart.x;
+            const dy = lineEnd.y - lineStart.y;
+            
+            if (dx === 0 && dy === 0) {
+                return Math.sqrt(Math.pow(point.x - lineStart.x, 2) + Math.pow(point.y - lineStart.y, 2));
+            }
+            
+            const length2 = dx * dx + dy * dy;
+            let t = ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / length2;
+            t = Math.max(0, Math.min(1, t)); // Batasi proyeksi agar tidak keluar dari segmen garis
+            
+            const projX = lineStart.x + t * dx;
+            const projY = lineStart.y + t * dy;
+            
+            return Math.sqrt(Math.pow(point.x - projX, 2) + Math.pow(point.y - projY, 2));
+        }
+
+        function douglasPeucker(points, epsilon) {
+            if (points.length <= 2) return points;
+
+            let maxDist = 0;
+            let index = 0;
+            const end = points.length - 1;
+
+            for (let i = 1; i < end; i++) {
+                const dist = perpendicularDistance(points[i], points[0], points[end]);
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    index = i;
+                }
+            }
+
+            if (maxDist > epsilon) {
+                const left = douglasPeucker(points.slice(0, index + 1), epsilon);
+                const right = douglasPeucker(points.slice(index), epsilon);
+                return left.slice(0, left.length - 1).concat(right);
+            } else {
+                return [points[0], points[end]];
+            }
+        }
+
+        // ==========================================
+        // PENGGANTI: Fungsi recognizeAndCorrectShape
+        // ==========================================
         function recognizeAndCorrectShape(points) {
-            if (points.length < 15) return; // Abaikan jika coretan terlalu pendek (hanya titik)
+            if (points.length < 15) return; // Abaikan jika coretan terlalu pendek
 
             const start = points[0];
             const end = points[points.length - 1];
             
-            // Hitung jarak garis lurus dari awal ke akhir
             const dx = end.x - start.x;
             const dy = end.y - start.y;
             const startEndDist = Math.sqrt(dx * dx + dy * dy);
 
-            // Hitung panjang total coretan berliku dan Bounding Box
             let pathLength = 0;
             let minX = start.x, maxX = start.x, minY = start.y, maxY = start.y;
 
@@ -931,23 +1025,20 @@
             const boundingBoxDiagonal = Math.sqrt(width * width + height * height);
 
             // 1. DETEKSI GARIS LURUS (Straight Line)
-            // Jika jarak ditarik lurus hampir sama dengan total jarak coretan (akurasi > 92%)
             if (startEndDist / pathLength > 0.92) {
-                ctx.putImageData(snapshot, 0, 0); // Hapus coretan berantakan
+                ctx.putImageData(snapshot, 0, 0); 
                 ctx.beginPath();
                 ctx.moveTo(start.x, start.y);
                 ctx.lineTo(end.x, end.y);
                 ctx.stroke();
-                return; // Selesai perbaiki garis
+                return; 
             }
 
-            // 2. DETEKSI BENTUK TERTUTUP (Lingkaran atau Kotak)
-            // Jika titik awal dan titik akhir bertemu/berdekatan
+            // 2. DETEKSI LINGKARAN SEMPURNA
             if (startEndDist / boundingBoxDiagonal < 0.15) {
                 const centerX = minX + width / 2;
                 const centerY = minY + height / 2;
                 
-                // Hitung standar deviasi jarak titik ke pusat
                 let avgRadius = 0;
                 points.forEach(p => {
                     avgRadius += Math.sqrt(Math.pow(p.x - centerX, 2) + Math.pow(p.y - centerY, 2));
@@ -961,7 +1052,6 @@
                 });
                 const stdDev = Math.sqrt(variance / points.length);
 
-                // A. Deteksi Lingkaran (Deviasi radius ke pusat sangat kecil/konsisten)
                 if (stdDev / avgRadius < 0.15) {
                     ctx.putImageData(snapshot, 0, 0);
                     ctx.beginPath();
@@ -969,15 +1059,33 @@
                     ctx.stroke();
                     return;
                 }
+            }
 
-                // B. Deteksi Kotak (Deviasi lebih besar karena ada sudut-sudut)
-                if (stdDev / avgRadius >= 0.15 && width > 10 && height > 10) {
-                    ctx.putImageData(snapshot, 0, 0);
-                    ctx.beginPath();
-                    ctx.rect(minX, minY, width, height);
-                    ctx.stroke();
-                    return;
+            // 3. DETEKSI POLIGON & ZIGZAG (Segitiga, Kotak, Pola Jembatan Truss)
+            // Mentolerir penyimpangan sekitar 4% dari ukuran bentuk
+            const epsilon = boundingBoxDiagonal * 0.04; 
+            const simplifiedPoints = douglasPeucker(points, epsilon);
+
+            // Syarat ini memastikan yang dikoreksi hanya pola geometris/struktur 
+            // dan tidak merusak coretan bebas (seperti saat pengguna menulis huruf/kalimat biasa)
+            const isGeometricPattern = simplifiedPoints.length > 2 && 
+                                       simplifiedPoints.length < (points.length * 0.3) && 
+                                       simplifiedPoints.length < 30;
+
+            if (isGeometricPattern) {
+                ctx.putImageData(snapshot, 0, 0);
+                ctx.beginPath();
+                ctx.moveTo(simplifiedPoints[0].x, simplifiedPoints[0].y);
+                
+                for (let i = 1; i < simplifiedPoints.length; i++) {
+                    // Fitur "Magnet": Jika titik awal & akhir berdekatan (bentuk tertutup), otomatis disatukan.
+                    if (i === simplifiedPoints.length - 1 && startEndDist / boundingBoxDiagonal < 0.15) {
+                        ctx.lineTo(simplifiedPoints[0].x, simplifiedPoints[0].y);
+                    } else {
+                        ctx.lineTo(simplifiedPoints[i].x, simplifiedPoints[i].y);
+                    }
                 }
+                ctx.stroke();
             }
         }
 
