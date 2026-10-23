@@ -40,8 +40,14 @@
     </script>
 
     <!-- Alpine.js (Untuk Dropdown Interaktif) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script> -->
+    <!-- <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script> -->
+
+    <!-- Alpine Plugins LOKAL (Harus dipanggil SEBELUM Alpine core) -->
+    <script defer src="./static/js/alpine-collapse.min.js"></script>
+
+    <!-- Alpine.js CSP -->
+    <script defer src="./static/js/alpine.min.js"></script>
 
     <!-- Lucide Icons (Khas SHADCN UI) -->
     <script src="https://unpkg.com/lucide@latest"></script>
